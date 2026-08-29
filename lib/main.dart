@@ -10,9 +10,15 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e, st) {
+    // No tumbamos la app por un fallo de init: la pantalla del itinerario
+    // muestra su estado de error y el pitch puede seguir.
+    debugPrint('Firebase.initializeApp falló: $e\n$st');
+  }
   runApp(const ProviderScope(child: VoyantisApp()));
 }
 
@@ -47,7 +53,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   DateTime? _handledSaveAt;
 
   void _openChat() => setState(() => _tab = 0);
-  void _openItinerary() => setState(() => _tab = 1);
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +80,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           tab: _tab,
           onTab: (i) => setState(() => _tab = i),
           onOpenChat: _openChat,
-          onOpenItinerary: _openItinerary,
         );
       },
     );
@@ -105,13 +109,11 @@ class _NarrowLayout extends StatelessWidget {
     required this.tab,
     required this.onTab,
     required this.onOpenChat,
-    required this.onOpenItinerary,
   });
 
   final int tab;
   final ValueChanged<int> onTab;
   final VoidCallback onOpenChat;
-  final VoidCallback onOpenItinerary;
 
   @override
   Widget build(BuildContext context) {

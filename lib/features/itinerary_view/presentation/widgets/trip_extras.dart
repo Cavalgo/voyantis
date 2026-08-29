@@ -184,22 +184,30 @@ class BudgetSection extends StatelessWidget {
   final BudgetBreakdown budget;
   final String currency;
 
+  static const List<Color> _palette = [
+    AppColors.sienna,
+    AppColors.sage,
+    AppColors.gold,
+    AppColors.siennaDark,
+    AppColors.muted,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final rows = <(String, num)>[
+    final all = <(String, num)>[
       ('Vuelos', budget.flights),
       ('Hospedaje', budget.accommodation),
       ('Actividades', budget.activities),
       ('Comida', budget.food),
       ('Colchón', budget.buffer),
-    ].where((r) => r.$2 > 0).toList();
+    ];
+    final rows = <(String, num, Color)>[
+      for (var i = 0; i < all.length; i++)
+        if (all[i].$2 > 0) (all[i].$1, all[i].$2, _palette[i]),
+    ];
 
-    final total = budget.total > 0
-        ? budget.total
-        : rows.fold<num>(0, (s, r) => s + r.$2);
-    final maxVal = rows.isEmpty
-        ? 1
-        : rows.map((r) => r.$2).reduce((a, b) => a > b ? a : b);
+    final sum = rows.fold<num>(0, (s, r) => s + r.$2);
+    final total = budget.total > 0 ? budget.total : sum;
 
     final t = Theme.of(context).textTheme;
 
@@ -208,33 +216,42 @@ class BudgetSection extends StatelessWidget {
       title: 'Presupuesto',
       child: Column(
         children: [
+          if (rows.isNotEmpty && sum > 0) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: SizedBox(
+                height: 12,
+                child: Row(
+                  children: [
+                    for (final r in rows)
+                      Expanded(
+                        flex: (r.$2 / sum * 1000).round().clamp(1, 1000).toInt(),
+                        child: Container(color: r.$3),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           for (final r in rows)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 96,
-                    child: Text(r.$1, style: t.bodySmall),
-                  ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: (r.$2 / maxVal).clamp(0.04, 1).toDouble(),
-                        minHeight: 8,
-                        backgroundColor: AppColors.sand,
-                        valueColor: const AlwaysStoppedAnimation(AppColors.sage),
-                      ),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: r.$3,
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-                  SizedBox(
-                    width: 82,
-                    child: Text(
-                      formatCost(r.$2),
-                      textAlign: TextAlign.right,
-                      style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                    ),
+                  Expanded(child: Text(r.$1, style: t.bodySmall)),
+                  Text(
+                    formatCost(r.$2),
+                    style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),

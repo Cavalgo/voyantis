@@ -29,10 +29,15 @@ class ItineraryScreen extends ConsumerWidget {
             icon: Icons.cloud_off_rounded,
             title: 'No pude cargar el itinerario',
             subtitle: 'Revisa la conexión con Firestore.\n$e',
+            action: FilledButton.tonalIcon(
+              onPressed: () => ref.invalidate(currentTripProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
           ),
         ),
         data: (trip) {
-          if (trip == null || trip.days.isEmpty && trip.summary == null) {
+          if (trip == null || (trip.days.isEmpty && trip.summary == null)) {
             return _Centered(
               child: _Message(
                 icon: Icons.map_outlined,
@@ -66,6 +71,8 @@ class _TripBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final summary = trip.summary ?? const Summary();
     final t = Theme.of(context).textTheme;
+    final days = [...trip.days]
+      ..sort((a, b) => a.dayNumber.compareTo(b.dayNumber));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -100,13 +107,13 @@ class _TripBody extends StatelessWidget {
                           ),
                           const SizedBox(height: 24),
                         ],
-                        if (trip.days.isNotEmpty) ...[
+                        if (days.isNotEmpty) ...[
                           _SectionTitle('Día a día'),
                           const SizedBox(height: 16),
-                          for (var i = 0; i < trip.days.length; i++)
+                          for (var i = 0; i < days.length; i++)
                             TimelineDay(
-                              day: trip.days[i],
-                              isLast: i == trip.days.length - 1,
+                              day: days[i],
+                              isLast: i == days.length - 1,
                             ),
                           const SizedBox(height: 12),
                         ],
