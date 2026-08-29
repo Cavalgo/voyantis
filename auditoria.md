@@ -1,41 +1,33 @@
 # Auditoría — Errores y discrepancias
 
-> Revisión de los docs de planeación + el estado real del repo, hecha antes de arrancar.
-> **Estado:** hallazgos reportados. En la sección **D**, las correcciones a `mymds/rules.md`,
-> `mymds/skills.md` y `CLAUDE.md` **ya se aplicaron** (2026-08-29); el resto **espera autorización**.
+> Revisión de los docs de planeación + el estado real del repo.
+> **Estado (2026-08-29):** sección **D** toda aplicada. La mayoría de bloqueantes de **A** ya resueltos
+> (ver marcas ✅). Pendiente: código de FASE 0 (limpiar scaffold) e implementación de los tracks.
 
-Entorno verificado (2026-08-29): Flutter 3.47.1 / Dart 3.13.1 instalados · `node`, `firebase`,
-`flutterfire` **no** instalados · repo era el scaffold `flutter create` por defecto (app contador) ·
-`pubspec.yaml` sin dependencias del stack.
+Entorno verificado (2026-08-29): Flutter 3.47.1 / Dart 3.13.1 · `node` v24, `npm` 11, `firebase` 15.28.2,
+`flutterfire` 1.4.1 instalados · el repo era el scaffold `flutter create` por defecto (app contador).
 
 ---
 
-## A. Bloqueantes de setup — resolver en FASE 0
+## A. Bloqueantes de setup
 
-### A1 · Toolchain incompleto
-`functions/` necesita **Node 20+**; el deploy necesita **Firebase CLI**; `firebase_options.dart` necesita
-**FlutterFire CLI**. Ninguno está instalado. Sin esto no hay backend ni deploy.
-→ FASE 0, frente 0.B.
+### A1 · Toolchain — ✅ RESUELTO
+Node 24, Firebase CLI 15.28.2, FlutterFire CLI 1.4.1 instalados. `firebase login` hecho (cavalgo01@gmail.com).
 
-### A2 · El repo es el scaffold por defecto
-`pubspec.yaml` no tiene `flutter_riverpod`, `firebase_core`, `cloud_firestore` ni `http`.
-`lib/main.dart` y `test/widget_test.dart` son el contador de `flutter create`.
-→ FASE 0, frente 0.C.
+### A2 · El repo era el scaffold por defecto — PARCIAL
+✅ Dependencias del stack añadidas a `pubspec.yaml` (`flutter_riverpod`, `firebase_core`, `cloud_firestore`,
+`http`, `google_fonts`, `cached_network_image`, `intl`). `functions/` scaffold creado + `npm install`.
+⏳ Pendiente (código FASE 0): `lib/main.dart` sigue siendo el contador; `test/widget_test.dart` idem (C16).
 
-### A3 · Google Places requiere billing
-La Places API responde 403 si el proyecto de GCP no tiene **billing habilitado**. Bloqueo clásico de hackathon.
-→ FASE 0, paso 0.A.4.
+### A3 · Google Places / billing — ✅ RESUELTO
+Proyecto `mi-viaje-11d84` en **plan Blaze** (billing activo). Falta confirmar que la API habilitada sea
+**"Places API"** (legacy) y restringir la key a esa API en GCP Console.
 
-### A4 · Límite de versión de Dart
-`pubspec.yaml` declara `environment: sdk: ^3.13.1` y el Dart instalado es exactamente 3.13.1.
-Cualquier paquete que exija Dart > 3.13 va a fallar en `pub get`.
-→ Al añadir deps (0.C.1), fijarse en las restricciones de SDK; si hace falta, subir la versión de Flutter.
+### A4 · Límite de versión de Dart — OK
+Deps resueltas sin conflicto de SDK (`flutter pub add` corrió limpio, `flutter analyze` sin issues).
 
-### A5 · Cloud Functions requiere plan Blaze
-En el plan gratuito (Spark) las Cloud Functions **no pueden hacer llamadas de red salientes** fuera de
-Google — ni a `api.anthropic.com`, ni a la Places API. **Todo el backend del agente depende de esto.**
-→ Upgrade a **plan Blaze** en FASE 0 (paso 0.A.1) + budget alert (~5 USD). Tier gratuito generoso;
-el gasto real del demo es de centavos.
+### A5 · Cloud Functions requiere plan Blaze — ✅ RESUELTO
+El proyecto ya está en Blaze. Poner un **budget alert** (~5 USD) en GCP Console si no existe.
 
 ---
 
@@ -134,15 +126,13 @@ y el backend carga `conversationContext` del doc y lo inyecta como contexto.
 
 ---
 
-## D. Plan de corrección de los otros docs
+## D. Correcciones aplicadas a los otros docs
 
-**Ya aplicado (2026-08-29):** D.2 `mymds/rules.md`, D.6 `CLAUDE.md`, y D.8 `mymds/skills.md`.
-**Pendiente de autorización:** D.1, D.3, D.4, D.5, D.7.
-Los cambios al código (C16, C17, A2) son parte de FASE 0.
+**Todas aplicadas (2026-08-29).** Lo único pendiente es código de FASE 0: C16 (`widget_test.dart`),
+C17 (`README.md` / `pubspec description`).
 
-### D.1 · `mymds/01-business-overview.md`  *(resuelve C15)* — PENDIENTE
-- Título: `# Business Overview — [Nombre del Proyecto]` → `# Business Overview — Voyantis`.
-- Borrar la línea de "*Ideas de nombre (opcionales...)*".
+### D.1 · `mymds/01-business-overview.md`  *(resuelve C15)* — ✅ APLICADO
+- Título → `# Business Overview — Voyantis`. Quitada la lista de "ideas de nombre".
 
 ### D.2 · `mymds/rules.md`  *(resuelve C18, B8)* — ✅ APLICADO
 - Ramas alineadas a `feature/agent` / `feature/ui`; Squad C en `main`.
@@ -150,36 +140,30 @@ Los cambios al código (C16, C17, A2) son parte de FASE 0.
 - "Secrets": `functions/.env` local + `firebase functions:secrets:set` para deploy.
 - Añadidas secciones de contrato del backend, fechas ISO, y config de la Cloud Function.
 
-### D.3 · `mymds/02-technical-architecture.md`  *(resuelve B8, B10, B11, B12, B13, A5)* — PENDIENTE
-- En "Google Places — nota técnica": aclarar que se usa la **Places API legacy** (Text Search + Photo),
-  y añadir la advertencia de que la URL de foto lleva la key → restringir la key a la Places API +
-  budget alert (o proxear por la función).
-- Nueva subsección "Cloud Function — config": **plan Blaze obligatorio** (sin él no hay egress a
-  Claude/Places); rewrite `/api/**` en `firebase.json` para evitar CORS; `timeoutSeconds: 300`,
-  `memory: 512MiB`; secrets vía `defineSecret` + Secret Manager.
-- En el schema de `trips`: añadir `profileId: string` (top-level) y `updatedAt`; fijar la convención de
-  fechas (ISO string vs `Timestamp`); nota del índice compuesto `profileId + updatedAt`.
+### D.3 · `mymds/02-technical-architecture.md`  *(resuelve B8, B10, B11, B12, B13, A5)* — ✅ APLICADO
+- Stack: Blaze obligatorio, `claude-opus-5`, Places API legacy.
+- Nuevas secciones "Contrato Cloud Function ↔ Flutter" y "Cloud Function — config" (300s/512MiB, secrets, rewrite).
+- Schema `trips`: `profileId` añadido; nota de fechas ISO + índice compuesto.
+- Google Places: advertencia de key en la URL de foto + mitigación.
+- Checklist actualizado a estado real (keys, Blaze, deps, functions scaffold — hechos).
 
-### D.4 · `mymds/ai-agent-design.md`  *(resuelve B5, B6, B9, B14)* — PENDIENTE
-- En "Tools": documentar que la Cloud Function recibe `{profileId, tripId?, messages[]}` y devuelve
-  `{reply, tripId, itinerarySaved, error?}`; el backend inyecta `profileId` en el doc, el modelo no lo ve.
-- En el esqueleto del system prompt: añadir "incluye **siempre** vuelos, hospedaje y desglose de
-  presupuesto en `save_itinerary`, aunque sean estimaciones".
-- En "Fase 3 — Guardado y edición": describir el caso "resume" vía `conversationContext`.
+### D.4 · `mymds/ai-agent-design.md`  *(resuelve B5, B6, B9, B14)* — ✅ APLICADO
+- Nueva sección "Contrato con el backend": `{profileId, tripId?, messages[]}` → `{reply, tripId, itinerarySaved, error?}`.
+- System prompt: "incluye SIEMPRE flights/accommodation/budgetBreakdown" + mantener `conversationContext`.
+- "Fase 3": caso reanudar-tras-recarga vía `conversationContext`.
 
-### D.5 · `mymds/flutter-architecture-features.md`  *(resuelve B5)* — PENDIENTE
-- `chat_repository.dart`: cambiar la firma de
-  `sendMessage(String tripId, String text) → Future<ChatResponse>` a
-  `sendMessage({String? tripId, required List<ChatMessage> messages}) → Future<ChatResponse>`.
-- `chat_notifier.dart`: notar que `ChatState` guarda la lista completa de mensajes y es lo que se reenvía.
+### D.5 · `mymds/flutter-architecture-features.md`  *(resuelve B5)* — ✅ APLICADO
+- `sendMessage({String? tripId, required List<ChatMessage> messages})` (historial completo + `profileId`).
+- `ChatState` guarda la lista completa de mensajes.
+- `trip_repository.dart`: `watchCurrentTrip()` (query por `profileId`). `core/config.dart` con `kProfileId`.
 
 ### D.6 · `CLAUDE.md`  *(resuelve A1, A5, C20)* — ✅ APLICADO
 - Modelo `claude-opus-5` fijado. Sección "Prerequisitos" (Node 20+, Firebase/FlutterFire CLI, plan Blaze).
 - Sección "Decisiones ya tomadas" (perfil fijo, historial completo, `/api/**`, fechas ISO).
 - Punteros a `phases.md` y `auditoria.md`; rutas de `mymds/` corregidas.
 
-### D.7 · `mymds/00-plan-equipo-timeline.md`  *(alineación con `phases.md`)* — PENDIENTE
-- Añadir una línea al inicio: "El desglose por dependencias y qué se paraleliza está en `phases.md` (raíz del repo)".
+### D.7 · `mymds/00-plan-equipo-timeline.md`  *(alineación con `phases.md`)* — ✅ APLICADO
+- Título → "Voyantis"; puntero a `phases.md` y `auditoria.md` al inicio.
 
 ### D.8 · `mymds/skills.md` — ✅ APLICADO
 - Receta 3 (tool call) reescrita con el loop manual real + `claude-opus-5` + `defineSecret`.

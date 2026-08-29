@@ -24,6 +24,13 @@ dos horas de merge hell en FASE 2.
 ## FASE 0 — Fundaciones y setup
 **Bloqueante para todo. ~30–40 min. 2 personas trabajando; el resto lee los docs de su squad.**
 
+> **Estado (2026-08-29) — buena parte ya hecha:**
+> ✅ Proyecto Firebase `mi-viaje-11d84` en **Blaze** · Firestore creado + reglas + índice `trips` desplegados ·
+> `flutterfire configure` → `lib/firebase_options.dart` · keys de Claude y Places en `functions/.env` **y**
+> Secret Manager · deps de Flutter añadidas · `functions/` scaffold + `npm install` · repo en GitHub con ramas.
+> ⏳ **Falta:** habilitar/confirmar "Places API" legacy + restringir la key en GCP · budget alert ·
+> limpiar el scaffold (`lib/main.dart`, `test/`) · `firebase init hosting` + primer deploy.
+
 Se divide en 3 frentes que corren **en paralelo**:
 
 ### Frente 0.A — Cuentas, servicios y API keys

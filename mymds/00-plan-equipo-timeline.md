@@ -1,4 +1,7 @@
-# Plan del día — Agente de Planeación de Viajes
+# Plan del día — Voyantis (Agente de Planeación de Viajes)
+
+> El desglose por dependencias y qué se paraleliza está en `phases.md` (raíz del repo).
+> Problemas conocidos y decisiones: `auditoria.md` (raíz).
 
 **Decisiones ya tomadas:**
 - Plataforma: **Flutter Web** (responsive, deploy vía Firebase Hosting, sin builds nativos)

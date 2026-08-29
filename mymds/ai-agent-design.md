@@ -29,6 +29,20 @@ El agente arma un resumen legible del itinerario (puede usar `search_places` par
 ## Fase 3 — Guardado y edición
 Una vez confirmado, el agente llama `save_itinerary` con el JSON completo (crea el documento en Firestore). Para cambios posteriores (el usuario vuelve y pide algo distinto), el agente vuelve a llamar `save_itinerary` con el `tripId` existente y los campos actualizados (upsert).
 
+**Reanudar tras recarga:** al recargar la página, Flutter pierde el historial de mensajes en memoria.
+Si el usuario vuelve a un `tripId` existente, el backend carga `conversationContext` del doc `trips` y lo
+antepone como contexto (bloque de `user` o nota en el system prompt) para que el agente entienda la
+edición sin releer toda la conversación. Por eso el agente debe mantener `conversationContext` **actualizado
+y útil** en cada `save_itinerary` (resumen del perfil + decisiones tomadas + qué quedó pendiente).
+
+## Contrato con el backend (Cloud Function)
+
+El agente no habla HTTP directo; corre dentro de la Cloud Function. Detalle en `02-technical-architecture.md`.
+- La función recibe `{ profileId, tripId?, messages[] }` y devuelve `{ reply, tripId, itinerarySaved, error? }`.
+- `profileId` lo inyecta el backend en el doc `trips` — **el modelo no lo ve ni lo maneja**.
+- El backend genera `tripId` en el primer `save_itinerary` y lo propaga a la respuesta.
+- Modelo: `claude-opus-5`. Loop de tool use manual (ver `skills.md` receta 4).
+
 ---
 
 ## Tools (function calling)
@@ -100,8 +114,12 @@ vuelve a mostrar el resumen.
 
 FASE DE GUARDADO:
 Solo cuando el usuario confirme explícitamente, llama a save_itinerary
-con el JSON completo. Para cambios posteriores a un itinerario ya
-guardado, usa el mismo tripId y actualiza solo lo necesario.
+con el JSON completo. Incluye SIEMPRE flights, accommodation y
+budgetBreakdown, aunque sean estimaciones (el itinerario visual los
+muestra siempre). Mantén conversationContext actualizado: resumen del
+perfil, decisiones tomadas y qué quedó pendiente. Para cambios
+posteriores a un itinerario ya guardado, usa el mismo tripId y
+actualiza solo lo necesario.
 
 Tono: cercano, entusiasta, como un amigo que sabe mucho de viajes —
 nunca como un formulario.

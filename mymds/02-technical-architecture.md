@@ -1,12 +1,17 @@
 # Arquitectura Técnica
 
+> Decisiones fijas y contrato del backend: `rules.md`. Fases: `phases.md` (raíz).
+
 ## Stack
 - **Frontend:** Flutter Web, Riverpod (sin code generation — ver `rules.md`), Clean Architecture ligera
-- **Backend/orquestación del agente:** Cloud Function (Node.js/Express) — proxy entre Flutter y Claude API, NUNCA exponer la API key de Claude ni de Google Places en el cliente
+- **Backend/orquestación del agente:** Cloud Function (Node 20, Functions **v2**, Express) — proxy entre
+  Flutter y Claude API (`claude-opus-5`). NUNCA exponer la API key de Claude ni de Google Places en el cliente.
 - **Agente:** Claude API con tool use
-- **Datos reales de lugares/fotos:** Google Places API (Text Search + Photo API)
-- **Persistencia:** Firestore
-- **Deploy:** Firebase Hosting (`flutter build web` → `firebase deploy --only hosting`)
+- **Datos reales de lugares/fotos:** Google Places API **legacy** (Text Search + Photo API)
+- **Persistencia:** Firestore (proyecto `mi-viaje-11d84`)
+- **Deploy:** Firebase Hosting (`flutter build web` → `firebase deploy --only hosting`) + Functions
+- **Plan Firebase:** **Blaze** obligatorio — en Spark la Cloud Function no puede hacer llamadas de red
+  salientes (ni a `api.anthropic.com` ni a Google Places).
 
 ## Flujo de datos
 
@@ -30,11 +35,53 @@ Flutter (itinerary_view feature) escucha Firestore en tiempo real (stream)
 
 **Por qué un backend intermedio y no llamar Claude API directo desde Flutter Web:** las API keys no deben viajar al cliente. La Cloud Function también es donde se ejecutan las tools (llamadas a Google Places, escritura en Firestore) de forma segura y centralizada.
 
+## Contrato Cloud Function ↔ Flutter
+
+```jsonc
+// POST /api/chat   (Flutter llama a /api/** vía rewrite de Hosting → sin CORS)
+// request
+{
+  "profileId": "voyantis-demo",         // perfil fijo (ver rules.md). El backend lo escribe en el doc.
+  "tripId": "abc | null",               // null hasta el primer save_itinerary
+  "messages": [                          // historial COMPLETO — Claude API es stateless
+    { "role": "user", "content": "..." },
+    { "role": "assistant", "content": "..." }
+  ]
+}
+// response
+{
+  "reply": "texto del agente",
+  "tripId": "abc",                       // SIEMPRE (nuevo o existente) — Flutter lo usa para watchTrip
+  "itinerarySaved": true,                // true si el agente llamó save_itinerary este turno
+  "error": null
+}
+```
+- El modelo **no ve** `profileId`; lo inyecta el backend al escribir el doc.
+- **Reanudar tras recarga:** si llega `tripId` con `messages` corto (sin historial), el backend carga
+  `conversationContext` del doc y lo antepone.
+
+## Cloud Function — config
+
+- **Región:** `us-central1`. Endpoint exportado: `api` (Express montado en `onRequest`).
+- **`timeoutSeconds: 300`, `memory: "512MiB"`** — el loop de tools (Claude + 2-3 round trips + Places)
+  pasa fácil los 60s por defecto.
+- **Secrets:** `defineSecret('ANTHROPIC_API_KEY')` y `defineSecret('GOOGLE_PLACES_API_KEY')`.
+  Local → `functions/.env` (gitignored). Deploy → `firebase functions:secrets:set` (Secret Manager).
+  **Ya están seteados** (Secret Manager, versión 1). Ver `rules.md` § Secrets.
+- **CORS:** no se maneja en la función — el rewrite `"/api/**" → api` en `firebase.json` hace que
+  Flutter y la función compartan origen.
+
 ## Schema de Firestore — colección `trips`
+
+> **Fechas:** siempre ISO 8601 string (`"2026-09-10"` / `"2026-09-10T14:00:00Z"`). `createdAt` /
+> `updatedAt` van como `Timestamp` de Firestore (server timestamp). La query "viaje actual" usa
+> `where(profileId ==) + orderBy(updatedAt desc) + limit(1)` → necesita el índice compuesto de
+> `firestore.indexes.json` (ya desplegado).
 
 ```json
 {
   "tripId": "auto-generado",
+  "profileId": "voyantis-demo",
   "status": "draft | confirmed",
   "createdAt": "timestamp",
   "updatedAt": "timestamp",
@@ -127,15 +174,23 @@ Flutter (itinerary_view feature) escucha Firestore en tiempo real (stream)
 ```
 
 ## Google Places — nota técnica
-La Photo API de Google Places devuelve una `photo_reference`, no una URL directa. Hay que construir la URL así:
+Se usa la **Places API legacy** (hay que habilitar "Places API", no solo "Places API (New)").
+La Photo API devuelve una `photo_reference`, no una URL directa. Se construye así:
 ```
 https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={photo_reference}&key={API_KEY}
 ```
-Esto se hace en el backend (Cloud Function), y la URL resultante es la que se guarda en `location.photoUrl`.
+Esto se hace en el backend, y la URL resultante se guarda en `location.photoUrl`.
 
-## Checklist de setup (hacer en los primeros 20 min)
-- [ ] API key de Claude (Anthropic Console)
-- [ ] API key de Google Places (Google Cloud Console — habilitar Places API)
-- [ ] Proyecto de Firebase creado + Firestore en modo test + Hosting habilitado
-- [ ] `flutterfire configure` corrido para generar `firebase_options.dart`
-- [ ] Cloud Function desplegada con ambas API keys como variables de entorno (nunca en código)
+⚠️ **Esa URL lleva la API key** → cuando el cliente renderiza la foto, la key de Places queda visible
+en la red. Para el demo es tolerable **porque** la key está restringida a la Places API + hay budget
+alert. Si sobra tiempo: endpoint proxy `/api/photo?ref=...` en la función (la key nunca llega al cliente).
+
+## Checklist de setup — estado actual
+- [x] API key de Claude → en `functions/.env` + Secret Manager
+- [x] API key de Google Places → en `functions/.env` + Secret Manager (restringir a "Places API" en GCP)
+- [x] Proyecto Firebase `mi-viaje-11d84` en **plan Blaze** + Firestore creado (reglas abiertas hasta 2026-09-28) + índice `trips`
+- [x] `flutterfire configure` → `lib/firebase_options.dart` (commiteado; su Web API key es pública)
+- [x] Dependencias Flutter añadidas (`flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`, `google_fonts`, `cached_network_image`, `intl`)
+- [x] `functions/` scaffold (`package.json`, `index.js` esqueleto, `.env` local, `npm install` hecho)
+- [ ] Hosting: `firebase init hosting` / primer `firebase deploy --only hosting`
+- [ ] Track A: implementar el loop del agente en `functions/index.js`

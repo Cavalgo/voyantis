@@ -1,6 +1,4 @@
-# Business Overview — [Nombre del Proyecto]
-
-*Ideas de nombre (opcionales, cambien libremente): Voyantis, Rutario, Aviana, Wandr, Itiner.*
+# Business Overview — Voyantis
 
 ## El problema
 Planear un viaje personalizado es tedioso: información dispersa entre vuelos, hoteles, actividades y reseñas, y las herramientas actuales (buscadores de vuelos, blogs, Pinterest) no entienden quién eres como viajero — si eres introvertido o sociable, si buscas fotos para Instagram o desconectarte, si quieres salir de tu zona de confort. El resultado: itinerarios genéricos o hasta 10+ horas de investigación manual.
