@@ -21,6 +21,24 @@ dos horas de merge hell en FASE 2.
 
 ---
 
+## 📍 Estado actual (2026-08-29)
+
+| Bloque | Estado |
+|---|---|
+| FASE 0 — setup | ✅ cerrada |
+| FASE 1 — contratos + modelos + seed `trips/demo-seed` | ✅ cerrada (commit `299b2d5`) |
+| **TRACK A — backend del agente** | 🟡 **pasada 1 hecha** (commit `e3fcc1a`): `/api/chat` deployado, conversa + guarda en `trips` + edita (upsert) + reanuda por `conversationContext`. Probado en vivo 4×. **Falta:** A3 `search_places` (fotos/lugares reales), reintentos explícitos. |
+| **TRACK B — Flutter UI** | 🔴 **no empezada.** `lib/features/chat_agent/` y `lib/features/itinerary_view/` son solo scaffold (README + `.gitkeep`). `lib/main.dart` = shell placeholder. **Es la prioridad** — sin UI no hay demo. |
+| TRACK C — producto/pitch/QA | ⬜ pendiente |
+| FASE 2 — integración | bloqueada por TRACK B |
+
+**Siguiente paso recomendado:** TRACK B (rama `feature/ui`) — feature `chat_agent` (pantalla de chat
+contra `/api/chat` real) + `itinerary_view` (timeline leyendo Firestore, contra `trips/demo-seed`).
+A3 (Google Places) va **después** de que la UI funcione: es aditivo al backend y no bloquea nada;
+`demo-seed` ya trae fotos reales de Unsplash para construir el timeline.
+
+---
+
 ## FASE 0 — Fundaciones y setup — ✅ CERRADA (2026-08-29)
 
 > Todo hecho. Lo que sigue es FASE 1 (contratos) y los tracks.
