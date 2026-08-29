@@ -33,88 +33,39 @@ dos horas de merge hell en FASE 2.
 
 Se divide en 3 frentes que corren **en paralelo**:
 
-### Frente 0.A — Cuentas, servicios y API keys
-**1 persona · ~25–35 min · bloquea Track A · NO bloquea Track B (usa el seed) ni Track C.**
+### Frente 0.A — Cuentas, servicios y API keys — ✅ casi todo hecho
+- [x] **0.A.1** Proyecto Firebase `mi-viaje-11d84` en **plan Blaze**. `firebase login` = cavalgo01@gmail.com.
+- [ ] **budget alert** (~5 USD) en GCP Console → *Billing* → *Budgets & alerts*. **FALTA.**
+- [x] **0.A.2** Firestore creado. Reglas abiertas hasta **2026-09-28** (`firestore.rules`, desplegado).
+      Índice compuesto `trips (profileId ASC, updatedAt DESC)` desplegado (`firestore.indexes.json`).
+- [x] **0.A.4** `flutterfire configure` → `lib/firebase_options.dart` (commiteado; su Web API key es pública).
+- [x] **0.A.5** API key de Anthropic → `functions/.env` + Secret Manager (`ANTHROPIC_API_KEY`).
+- [x] **0.A.6** API key de Google Places → `functions/.env` + Secret Manager (`GOOGLE_PLACES_API_KEY`).
+- [ ] En **GCP Console**: confirmar que la API habilitada es **"Places API"** (legacy, no solo "New")
+      y restringir la key a esa API. La URL de foto lleva la key → ver `auditoria.md` B10. **FALTA.**
+- [x] **0.A.8** `functions/.env` (gitignored) + `functions/.env.example` (commiteado). Secrets de deploy
+      seteados. Verificado: ninguna key en el historial de git.
 
-**0.A.1 — Proyecto Firebase + GCP** (Firebase también crea el proyecto de Google Cloud):
-- console.firebase.google.com → *Add project*.
-- ⚠️ **Upgrade a plan Blaze** (pay-as-you-go). Obligatorio: en el plan gratuito (Spark) las Cloud
-  Functions **no pueden hacer llamadas de red salientes** a `api.anthropic.com` ni a Google Maps.
-  Blaze tiene tier gratuito generoso → poner un **budget alert** en ~5 USD.
+### Frente 0.B — Toolchain local — ✅ hecho
+Node 24 · npm 11 · Firebase CLI 15.28.2 · FlutterFire CLI 1.4.1 · Flutter 3.47.1 / Dart 3.13.1.
 
-**0.A.2 — Firestore:** *Firestore Database* → *Create database* → **modo test** (reglas abiertas,
-caducan en 30 días — ok para hoy). Región `us-*` (ej. `nam5`); anotarla.
+### Frente 0.C — Scaffold de código — PARCIAL
+- [x] **0.C.1** Deps en `pubspec.yaml` (`flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`,
+      `google_fonts`, `cached_network_image`, `intl`). `flutter analyze` limpio.
+- [x] **functions/**: `package.json` + `index.js` (esqueleto: `/chat`, `defineSecret`, timeout 300s/512MiB),
+      `.env` local, `.env.example`. `npm install` hecho.
+- [ ] **0.C.2** Árbol de carpetas `lib/core/{models,services,theme}` + `lib/features/{chat_agent,itinerary_view}/{data,domain,presentation/widgets}`. **FALTA.**
+- [ ] **0.C.3** Limpiar scaffold: `lib/main.dart` → `ProviderScope` + `MaterialApp` + navegación (borrar el
+      contador); borrar/stub `test/widget_test.dart`; actualizar `README.md` + `description:` de pubspec. **FALTA.**
 
-**0.A.3 — Hosting:** *Hosting* → *Get started* (el `firebase init` se hace en 0.D).
+### Cierre de FASE 0
+- [x] **0.D.1** git + remoto GitHub + push `main`. **0.D.2** ramas `feature/agent` / `feature/ui`.
+- [x] **0.D.4** `firebase.json` con rewrite `"/api/**" → api` (+ SPA fallback, functions, firestore, emuladores).
+- [ ] **0.D.3** Primer `firebase deploy --only functions` → URL real de la función (el esqueleto ya devuelve
+      501; sirve para probar el rewrite y CORS). **FALTA.**
 
-**0.A.4 — App Web + `firebase_options.dart`:** correr `flutterfire configure` (necesita FlutterFire
-CLI de 0.B) → registra la app web y escribe `lib/firebase_options.dart`.
-✅ **`firebase_options.dart` SÍ se commitea** — su "Web API key" es **pública por diseño** (identifica
-el proyecto, no da acceso; la seguridad está en las reglas de Firestore).
-
-**0.A.5 — API key de Anthropic (Claude):** Anthropic Console → *API Keys* → `sk-ant-...`.
-Vive **solo** como secret de la Cloud Function (ver 0.A.8).
-
-**0.A.6 — API key de Google (Places):**
-- Google Cloud Console (mismo proyecto) → *APIs & Services* → habilitar **"Places API"** (la legacy — ver `auditoria.md` #11).
-- *Credentials* → *Create credentials* → *API key* → `AIza...`.
-- Restringir: *API restrictions* → solo "Places API". (No se puede restringir por IP: las Cloud
-  Functions gen 2 no tienen IP fija → compensar con el budget alert.)
-- Vive como secret de la función. Si las URLs de foto se guardan crudas en Firestore, la key queda
-  visible en el cliente (`auditoria.md` #10) → si sobra tiempo, endpoint proxy `/api/photo`.
-
-**0.A.7 — Billing GCP:** el upgrade a Blaze de 0.A.1 ya activa billing en el proyecto de Google Cloud,
-que es lo que Places API exige. Confirmar en Cloud Console → *Billing* que el proyecto tiene cuenta ligada.
-
-**0.A.8 — Secrets: que NO lleguen a git.**
-- **Local:** Track A pone en `functions/.env` → `ANTHROPIC_API_KEY=...` y `GOOGLE_PLACES_API_KEY=...`.
-  Ya está en `.gitignore`. Commitear un **`functions/.env.example`** con placeholders para que todos
-  sepan qué falta.
-- **Deploy (Cloud Functions v2):** `firebase functions:secrets:set ANTHROPIC_API_KEY` y
-  `... GOOGLE_PLACES_API_KEY` → Google Secret Manager, inyectados en runtime; en el código se
-  referencian con `defineSecret('ANTHROPIC_API_KEY')`.
-- **Nunca** commitear las keys, nunca `console.log` de una key. Antes de cada push: `git status` + ojo al diff.
-
-**Checklist 0.A:**
-- [ ] Proyecto Firebase + **plan Blaze** + budget alert
-- [ ] Firestore modo test + región anotada
-- [ ] Hosting habilitado
-- [ ] `flutterfire configure` → `firebase_options.dart` commiteado
-- [ ] `sk-ant-...` de Anthropic
-- [ ] `AIza...` de Google · **Places API** habilitada · key restringida a Places API
-- [ ] `functions/.env` local (gitignored) + `functions/.env.example` commiteado
-- [ ] secrets de deploy seteados (`firebase functions:secrets:set`)
-
-### Frente 0.B — Toolchain local
-- **0.B.1** Instalar **Node 20+** (hoy no está instalado).
-- **0.B.2** Instalar **Firebase CLI** (`npm i -g firebase-tools`) y hacer `firebase login`.
-- **0.B.3** Instalar **FlutterFire CLI** (`dart pub global activate flutterfire_cli`).
-- **0.B.4** Verificar `flutter` (ya está: 3.47.1 / Dart 3.13.1).
-
-### Frente 0.C — Scaffold de código
-- **0.C.1** Añadir dependencias a `pubspec.yaml`:
-  `flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`, `google_fonts`,
-  `cached_network_image`, `intl`. Correr `flutter pub get`. (Riverpod **sin** codegen — ver `mymds/rules.md`.)
-- **0.C.2** Crear el árbol de carpetas (ver `mymds/flutter-architecture-features.md`):
-  ```
-  lib/core/{models,services,theme}/
-  lib/features/chat_agent/{data,domain,presentation/widgets}/
-  lib/features/itinerary_view/{data,domain,presentation/widgets}/
-  functions/
-  ```
-- **0.C.3** Limpiar el scaffold por defecto:
-  - `lib/main.dart` → `ProviderScope` + `MaterialApp` + navegación entre las 2 pantallas (borrar el contador).
-  - Borrar o dejar como stub `test/widget_test.dart` (hoy referencia el contador → rompe `flutter analyze`).
-  - Actualizar `README.md` y el `description:` de `pubspec.yaml`.
-
-### Cierre de FASE 0 (depende de 0.A + 0.B)
-- **0.D.1** `git init`, primer commit, conectar remoto de GitHub, push a `main` (ver sección "Git" abajo).
-- **0.D.2** Crear ramas `feature/agent` y `feature/ui`.
-- **0.D.3** Desplegar una Cloud Function **"hello world"** para tener la **URL real** cuanto antes.
-- **0.D.4** En `firebase.json`, configurar rewrite `"/api/**"` → la función (esto **elimina el problema de CORS**).
-
-**Salida de FASE 0:** repo vivo en GitHub, `flutter run -d chrome` levanta un shell vacío,
-`firebase deploy` funciona, y hay una URL de función conocida.
+**Salida de FASE 0:** repo vivo ✅, deps listas ✅, infra Firebase lista ✅.
+Falta: limpiar scaffold (0.C.2/0.C.3), primer deploy de la función (0.D.3), y los 2 pendientes de GCP.
 
 ---
 
@@ -126,7 +77,7 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
 - **1.1 — Modelos Dart** (`lib/core/models/`): `Trip`, `TravelerProfile`, `Summary`, `Flight`,
   `Accommodation`, `Day`, `Activity`, `Location`, `BudgetBreakdown`.
   Cada uno con `fromJson` / `toJson` **exactamente** alineados al schema de `mymds/02-technical-architecture.md`.
-  Ojo con fechas (guardar como ISO string o `Timestamp` — decidir **una** convención).
+  Fechas de contenido (startDate, checkIn, activity date…) = **ISO 8601 string**; `createdAt`/`updatedAt` = `Timestamp`.
 
 - **1.2 — Contrato HTTP** Cloud Function ↔ Flutter (congelar los nombres de campos):
   ```jsonc
@@ -192,16 +143,20 @@ Convergen en FASE 2.
 ---
 
 ## TRACK A — Backend del agente
-**Squad A · rama `feature/agent` · depende de: 0.D.3, 1.2, 1.3**
+**Squad A · rama `feature/agent` · depende de: 1.2, 1.3**
+
+Punto de partida: **`functions/index.js` ya tiene el esqueleto** — Express, `POST /chat`, `defineSecret`
+para las 2 keys, `onRequest` con `timeoutSeconds: 300` / `memory: "512MiB"` / `region: "us-central1"`.
+Hoy devuelve `501 not_implemented`. Recetas: `mymds/skills.md` 4–6. `npm install` ya está hecho.
 
 | Paso | Qué | Depende de | Paralelo con |
 |---|---|---|---|
-| **A1** | Proxy base: Express en la Cloud Function, `POST /chat`. Reenvía a Claude API (Messages API, **`claude-opus-5`**), devuelve `reply`. API keys **solo** en env vars de la función. | A0.D.3 | — |
+| **A1** | Rellenar `/chat`: reenviar a Claude API (Messages API, **`claude-opus-5`**), devolver `reply`. Leer las keys de `ANTHROPIC_API_KEY.value()` / `GOOGLE_PLACES_API_KEY.value()`. | esqueleto | — |
 | **A2** | Loop de tools (manual agentic loop): `while stop_reason == "tool_use"` → ejecutar tool → devolver `tool_result` → repetir hasta `end_turn`. Tope de seguridad (~8 iteraciones). | A1 | — |
-| **A3** | `search_places`: Google Places **Text Search** + construir la URL de la foto en el backend. Devolver `{name, address, lat, lng, rating, photoUrl, category}`. | A2 | **A4** |
-| **A4** | `save_itinerary`: upsert a la colección `trips` (Firebase Admin SDK). Generar `tripId` si falta, devolverlo, setear `itinerarySaved: true`. Escribir `profileId` (del request) y `updatedAt` (server timestamp) en el doc. | A2 | **A3** |
+| **A3** | `search_places`: Google Places **Text Search** (legacy) + construir la URL de la foto en el backend. Devolver `{name, address, lat, lng, rating, photoUrl, category}`. | A2 | **A4** |
+| **A4** | `save_itinerary`: upsert a la colección `trips` (Firebase Admin SDK, ya inicializado en el esqueleto). Generar `tripId` si falta, devolverlo, setear `itinerarySaved: true`. Escribir `profileId` (del request) y `updatedAt` (`FieldValue.serverTimestamp()`) en el doc. | A2 | **A3** |
 | **A5** | System prompt (de `mymds/ai-agent-design.md`) + persistir `conversationContext` en el doc para poder reanudar ediciones tras recarga. Instruir al agente a **siempre** incluir flights / accommodation / budget. | A2 | — |
-| **A6** | Config de la función: **timeout 300s, memoria 512MB**. Manejo de errores (429 / 5xx de Claude) → respuesta degradada, nunca crash. | A1 | — |
+| **A6** | Manejo de errores (429 / 5xx de Claude) → respuesta degradada, nunca crash. Primer `firebase deploy --only functions` para tener la URL real. | A1 | — |
 
 **Paralelo dentro del track:** A3 ∥ A4 (una persona cada uno) una vez que A2 existe.
 
@@ -261,7 +216,7 @@ B3 no necesita nada del backend gracias al seed.
 ## FASE 4 — Deploy y ensayo del pitch
 
 1. `flutter build web` + `firebase deploy --only hosting`.
-2. `firebase deploy --only functions` (versión final, con env vars).
+2. `firebase deploy --only functions` (versión final; secrets ya en Secret Manager).
 3. 1–2 corridas del pitch + buffer.
 4. **Plan B documentado:** si el backend falla en vivo, abrir el itinerario `trips/demo-seed` directo.
 
