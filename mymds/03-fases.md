@@ -26,13 +26,57 @@ dos horas de merge hell en FASE 2.
 
 Se divide en 3 frentes que corren **en paralelo**:
 
-### Frente 0.A — Cuentas e infraestructura
-- **0.A.1** Crear proyecto de Firebase → habilitar **Firestore (modo test)** + **Hosting**.
-- **0.A.2** Correr `flutterfire configure` → genera `lib/firebase_options.dart` (se commitea).
-- **0.A.3** API key de **Anthropic** (Anthropic Console).
-- **0.A.4** API key de **Google Cloud** → habilitar **"Places API"** (la legacy, ver `04-auditoria.md` #11)
-  + **habilitar billing** en el proyecto GCP (sin billing, Places responde 403).
-- **0.A.5** Restringir la key de Places a: API = Places, y HTTP referrer = dominio de Hosting + `localhost`.
+### Frente 0.A — Cuentas, servicios y API keys
+**1 persona · ~25–35 min · bloquea Track A · NO bloquea Track B (usa el seed) ni Track C.**
+
+**0.A.1 — Proyecto Firebase + GCP** (Firebase también crea el proyecto de Google Cloud):
+- console.firebase.google.com → *Add project*.
+- ⚠️ **Upgrade a plan Blaze** (pay-as-you-go). Obligatorio: en el plan gratuito (Spark) las Cloud
+  Functions **no pueden hacer llamadas de red salientes** a `api.anthropic.com` ni a Google Maps.
+  Blaze tiene tier gratuito generoso → poner un **budget alert** en ~5 USD.
+
+**0.A.2 — Firestore:** *Firestore Database* → *Create database* → **modo test** (reglas abiertas,
+caducan en 30 días — ok para hoy). Región `us-*` (ej. `nam5`); anotarla.
+
+**0.A.3 — Hosting:** *Hosting* → *Get started* (el `firebase init` se hace en 0.D).
+
+**0.A.4 — App Web + `firebase_options.dart`:** correr `flutterfire configure` (necesita FlutterFire
+CLI de 0.B) → registra la app web y escribe `lib/firebase_options.dart`.
+✅ **`firebase_options.dart` SÍ se commitea** — su "Web API key" es **pública por diseño** (identifica
+el proyecto, no da acceso; la seguridad está en las reglas de Firestore).
+
+**0.A.5 — API key de Anthropic (Claude):** Anthropic Console → *API Keys* → `sk-ant-...`.
+Vive **solo** como secret de la Cloud Function (ver 0.A.8).
+
+**0.A.6 — API key de Google (Places):**
+- Google Cloud Console (mismo proyecto) → *APIs & Services* → habilitar **"Places API"** (la legacy — ver `04-auditoria.md` #11).
+- *Credentials* → *Create credentials* → *API key* → `AIza...`.
+- Restringir: *API restrictions* → solo "Places API". (No se puede restringir por IP: las Cloud
+  Functions gen 2 no tienen IP fija → compensar con el budget alert.)
+- Vive como secret de la función. Si las URLs de foto se guardan crudas en Firestore, la key queda
+  visible en el cliente (`04-auditoria.md` #10) → si sobra tiempo, endpoint proxy `/api/photo`.
+
+**0.A.7 — Billing GCP:** el upgrade a Blaze de 0.A.1 ya activa billing en el proyecto de Google Cloud,
+que es lo que Places API exige. Confirmar en Cloud Console → *Billing* que el proyecto tiene cuenta ligada.
+
+**0.A.8 — Secrets: que NO lleguen a git.**
+- **Local:** Track A pone en `functions/.env` → `ANTHROPIC_API_KEY=...` y `GOOGLE_PLACES_API_KEY=...`.
+  Ya está en `.gitignore`. Commitear un **`functions/.env.example`** con placeholders para que todos
+  sepan qué falta.
+- **Deploy (Cloud Functions v2):** `firebase functions:secrets:set ANTHROPIC_API_KEY` y
+  `... GOOGLE_PLACES_API_KEY` → Google Secret Manager, inyectados en runtime; en el código se
+  referencian con `defineSecret('ANTHROPIC_API_KEY')`.
+- **Nunca** commitear las keys, nunca `console.log` de una key. Antes de cada push: `git status` + ojo al diff.
+
+**Checklist 0.A:**
+- [ ] Proyecto Firebase + **plan Blaze** + budget alert
+- [ ] Firestore modo test + región anotada
+- [ ] Hosting habilitado
+- [ ] `flutterfire configure` → `firebase_options.dart` commiteado
+- [ ] `sk-ant-...` de Anthropic
+- [ ] `AIza...` de Google · **Places API** habilitada · key restringida a Places API
+- [ ] `functions/.env` local (gitignored) + `functions/.env.example` commiteado
+- [ ] secrets de deploy seteados (`firebase functions:secrets:set`)
 
 ### Frente 0.B — Toolchain local
 - **0.B.1** Instalar **Node 20+** (hoy no está instalado).
@@ -81,7 +125,8 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
   ```jsonc
   // POST /api/chat  — request
   {
-    "tripId": "abc123 | null",           // null en el primer mensaje
+    "profileId": "voyanties-demo",        // perfil fijo único (ver "Identidad" abajo)
+    "tripId": "abc123 | null",            // null en el primer mensaje
     "messages": [                          // historial COMPLETO, Flutter lo mantiene y lo reenvía
       { "role": "user", "content": "..." },
       { "role": "assistant", "content": "..." }
@@ -96,17 +141,39 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
   }
   ```
   > Por qué el historial completo: Claude API es *stateless*. Ver `04-auditoria.md` #5 y #6.
+  > El backend escribe `profileId` en el doc `trips` (lo toma del request, **no** del modelo).
+  > El doc `trips` gana un campo top-level `"profileId": "string"`.
 
 - **1.3 — Schema de los tools** (`search_places`, `save_itinerary`): copiar los `input_schema` de
   `ai-agent-design.md` a un JSON compartido en `functions/` y usarlo como fuente de verdad.
   Confirmar qué campos devuelve `search_places` (name, address, lat, lng, rating, photoUrl, category).
 
 - **1.4 — Seed de Firestore** (`trips/demo-seed`): crear **a mano** en la consola de Firestore un
-  documento `trips` completo, con 2–3 días y 3–4 actividades con `photoUrl` real.
+  documento `trips` completo, con 2–3 días y 3–4 actividades con `photoUrl` real y
+  `profileId: "voyanties-demo"`.
   **Esto es lo que desbloquea a Squad B**: pueden construir todo el timeline visual leyendo este doc,
   sin esperar a que el backend funcione. Además es el **escenario de respaldo** para el pitch en vivo.
 
 **Salida de FASE 1:** modelos compilando, contrato escrito en este doc / en el repo, `trips/demo-seed` visible en Firestore.
+
+### Identidad y "no romperse al recargar"  *(decisión tomada — opción 1: perfil fijo, sin auth)*
+
+**No hay auth. No hay perfiles todavía.** Hay **un solo perfil**, con un ID fijo inventado una vez
+y hardcodeado: constante `PROFILE_ID = "voyanties-demo"` en `lib/core/config.dart`. Al estar en el
+código fuente, **cada reload usa el mismo ID** sin depender de memoria ni de `localStorage`.
+Todo `trip` que crea el backend lleva ese `profileId`.
+
+- **La app siempre muestra el viaje de la base de datos.** `TripRepository.watchCurrentTrip()` =
+  `trips.where('profileId', == PROFILE_ID).orderBy('updatedAt', desc).limit(1)`. Recargar la página
+  re-corre la query y el itinerario reaparece — no importa que el `tripId` en memoria se haya perdido.
+  Requiere un **índice compuesto** `profileId + updatedAt` (Firestore da el link para crearlo la 1ª vez).
+  - Variante aún más simple si se quiere: sin `where`, solo `orderBy('updatedAt', desc).limit(1)` →
+    "el último viaje que exista". El `PROFILE_ID` no cuesta nada y deja la puerta abierta a Fase 2.
+- **Continuidad del chat (opcional, ~15 min):** persistir `{tripId, messages}` en `localStorage` en
+  cada turno y restaurarlo al abrir. Sin esto, recargar **durante el diagnóstico** (antes del primer
+  guardado) pierde la conversación — aceptable para el demo, el itinerario ya guardado no se pierde.
+- Todos los que abran la app deployada comparten ese perfil → ven el mismo "viaje actual".
+  "Mis viajes" (varios) + auth real = Fase 2.
 
 ---
 
@@ -125,7 +192,7 @@ Convergen en FASE 2.
 | **A1** | Proxy base: Express en la Cloud Function, `POST /chat`. Reenvía a Claude API (Messages API, **`claude-opus-5`**), devuelve `reply`. API keys **solo** en env vars de la función. | A0.D.3 | — |
 | **A2** | Loop de tools (manual agentic loop): `while stop_reason == "tool_use"` → ejecutar tool → devolver `tool_result` → repetir hasta `end_turn`. Tope de seguridad (~8 iteraciones). | A1 | — |
 | **A3** | `search_places`: Google Places **Text Search** + construir la URL de la foto en el backend. Devolver `{name, address, lat, lng, rating, photoUrl, category}`. | A2 | **A4** |
-| **A4** | `save_itinerary`: upsert a la colección `trips` (Firebase Admin SDK). Generar `tripId` si falta, devolverlo, y setear `itinerarySaved: true` en la respuesta. | A2 | **A3** |
+| **A4** | `save_itinerary`: upsert a la colección `trips` (Firebase Admin SDK). Generar `tripId` si falta, devolverlo, setear `itinerarySaved: true`. Escribir `profileId` (del request) y `updatedAt` (server timestamp) en el doc. | A2 | **A3** |
 | **A5** | System prompt (de `ai-agent-design.md`) + persistir `conversationContext` en el doc para poder reanudar ediciones tras recarga. Instruir al agente a **siempre** incluir flights / accommodation / budget. | A2 | — |
 | **A6** | Config de la función: **timeout 300s, memoria 512MB**. Manejo de errores (429 / 5xx de Claude) → respuesta degradada, nunca crash. | A1 | — |
 
@@ -140,7 +207,7 @@ Convergen en FASE 2.
 |---|---|---|---|
 | **B1** | App shell: `ProviderScope`, tema *aesthetic* del timeline (`core/theme/`), navegación chat ↔ itinerario. | 0.C.3 | — |
 | **B2** | `chat_agent`: `ChatRepository.sendMessage(...)` → `ApiClient` a la función; `ChatNotifier extends Notifier<ChatState>` (mensajes, loading, `tripId`); `ChatScreen` (burbujas + input; loading/error como `AsyncValue`). | B1, 1.1, 1.2 | **B3** |
-| **B3** | `itinerary_view`: `TripRepository.watchTrip(tripId)` → `StreamProvider.family` sobre Firestore; `ItineraryScreen` (header con resumen + días); `TimelineDay`; `ActivityCard` (foto con `cached_network_image`, hora, título, descripción, costo, tip). **Construir contra `trips/demo-seed`.** | B1, 1.1, 1.4 | **B2** |
+| **B3** | `itinerary_view`: `TripRepository` con `watchTrip(tripId)` **y** `watchCurrentTrip()` (query `profileId == PROFILE_ID` ordenada por `updatedAt` desc, limit 1) → `StreamProvider`; `ItineraryScreen` (header con resumen + días); `TimelineDay`; `ActivityCard` (foto con `cached_network_image`, hora, título, descripción, costo, tip). **Construir contra `trips/demo-seed`.** | B1, 1.1, 1.4 | **B2** |
 | **B4** | Wire chat → itinerario: cuando `ChatResponse.itinerarySaved == true`, navegar / mostrar link a `itinerary_view` con el `tripId`. | B2, B3 | — |
 | **B5** | Pulido visual del timeline (pantalla completa / proyector). Se solapa con FASE 3. | B3 | — |
 

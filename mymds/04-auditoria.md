@@ -30,6 +30,12 @@ La Places API responde 403 si el proyecto de GCP no tiene **billing habilitado**
 Cualquier paquete que exija Dart > 3.13 va a fallar en `pub get`.
 → Al añadir deps (0.C.1), fijarse en las restricciones de SDK; si hace falta, subir la versión de Flutter.
 
+### A5 · Cloud Functions requiere plan Blaze
+En el plan gratuito (Spark) las Cloud Functions **no pueden hacer llamadas de red salientes** fuera de
+Google — ni a `api.anthropic.com`, ni a la Places API. **Todo el backend del agente depende de esto.**
+→ Upgrade a **plan Blaze** en FASE 0 (paso 0.A.1) + budget alert (~5 USD). Tier gratuito generoso;
+el gasto real del demo es de centavos.
+
 ---
 
 ## B. Discrepancias y contratos sin definir entre docs — resolver en FASE 1
@@ -53,12 +59,17 @@ suscribirse a `watchTrip(tripId)` y mostrar el itinerario.
 Colección Firestore = `trips`; tool = `save_itinerary`; modelo Dart = `Trip`; feature = `itinerary_view`.
 No es un bug, pero conviene fijar "**trip = itinerario**" y no introducir una colección `itineraries` por error.
 
-### B8 · Auth anónima: mencionada pero innecesaria
-`rules.md` y `CLAUDE.md` dicen "usen Auth anónimo o un usuario fijo". Pero:
-- Firestore está en **modo test** (reglas abiertas) → no hace falta estar autenticado para leer/escribir.
-- El diseño identifica cada viaje por el `tripId` que el cliente guarda y pasa → no hay concepto de "mis viajes".
-→ **Decisión:** **omitir Auth por completo** para el demo. Habilitarla solo si sobra tiempo. Que nadie
-pierda 30 min configurando Auth anónima que no se usa.
+### B8 · Identidad del "dueño" de un viaje — DECIDIDO: perfil fijo, sin auth
+`rules.md` y `CLAUDE.md` dicen "Auth anónimo o usuario fijo"; el diseño no define cómo un usuario
+vuelve a su viaje tras recargar (el `tripId` vive solo en memoria de Flutter). En Flutter **Web no
+existe un device-id confiable**.
+→ **Decisión (opción 1):** **sin auth**. Un **perfil fijo único** — constante `PROFILE_ID` en
+`lib/core/config.dart` (ej. `"voyanties-demo"`). Todo `trip` lleva `profileId`. Al recargar, el
+itinerario se recupera con `trips.where(profileId == PROFILE_ID).orderBy(updatedAt desc).limit(1)`.
+Opcional: `localStorage` para la continuidad del chat durante la fase de diagnóstico.
+→ **Impacto:** `ChatRequest` gana `profileId`; el doc `trips` gana `profileId` (top-level, lo escribe
+el **backend**, no el modelo); hace falta un índice compuesto Firestore `profileId + updatedAt`.
+→ Auth real + "mis viajes" (varios) = Fase 2. Detalle en `03-fases.md` § "Identidad y no romperse al recargar".
 
 ### B9 · `save_itinerary` no obliga a flights / accommodation / budget
 El `input_schema` del tool tiene `required: ["summary", "days"]`. `flights`, `accommodation` y
@@ -73,9 +84,11 @@ tolerar que falten (no crashear si `flights == null`).
 Esa URL se guarda en Firestore y la renderiza el navegador → **la key de Places viaja al cliente**
 dentro de la URL de la imagen. `rules.md` ("nunca en código Flutter, nunca en un commit") se cumple
 literalmente (no está en el código ni en un commit), pero la key sí queda expuesta en la red.
-→ **Decisión para el demo:** aceptable **si** la key está restringida a: API = Places + HTTP referrer
-= dominio de Hosting (+ `localhost` para dev). Alternativa más limpia si sobra tiempo: proxear la
-imagen por la Cloud Function (`/api/photo?ref=...`).
+→ **Decisión para el demo:** una sola key restringida a la **Places API** (no se puede restringir por
+IP — Cloud Functions gen 2 no tiene IP fija) + **budget alert** bajo en GCP. La exposición vía URL de
+foto es tolerable para el hackathon. Alternativa limpia si sobra tiempo: endpoint proxy
+`/api/photo?ref=...` en la función (la key nunca llega al cliente), o una 2ª key solo-fotos restringida
+por referrer HTTP al dominio de Hosting.
 
 ### B11 · Formato de la Places Photo API: legacy vs new
 `02-technical-architecture.md` usa el endpoint **legacy**:
@@ -133,19 +146,23 @@ Los cambios al código (C16, C17, A2) son parte de FASE 0, no de esta tanda.
 - Sección "Git": ramas → `feature/agent` (Squad A) y `feature/ui` (Squad B); nota de que Squad C
   trabaja en `main`.
 - Sección "Qué NO hacer hoy": cambiar "usen Auth anónimo o un usuario fijo" por
-  "**no configuren Auth** — Firestore en modo test + `tripId` de cliente es suficiente para el demo".
+  "**no configuren Auth** — perfil fijo `PROFILE_ID` + Firestore en modo test es suficiente (ver B8)".
+- Sección "Secrets": añadir que en local van en `functions/.env` (gitignored) y en deploy vía
+  `firebase functions:secrets:set` (nunca `functions:config:set` en un archivo commiteado).
 
-### D.3 · `02-technical-architecture.md`  *(resuelve B10, B11, B12, B13)*
+### D.3 · `02-technical-architecture.md`  *(resuelve B8, B10, B11, B12, B13, A5)*
 - En "Google Places — nota técnica": aclarar que se usa la **Places API legacy** (Text Search + Photo),
-  y añadir la advertencia de que la URL de foto lleva la key → restringir la key por API + referrer HTTP
-  (o proxear por la función).
-- Nueva subsección "Cloud Function — config": rewrite `/api/**` en `firebase.json` para evitar CORS;
-  `timeoutSeconds: 300`, `memory: 512MiB`.
-- En el schema de `trips`: fijar la convención de fechas (ISO string vs `Timestamp`).
+  y añadir la advertencia de que la URL de foto lleva la key → restringir la key a la Places API +
+  budget alert (o proxear por la función).
+- Nueva subsección "Cloud Function — config": **plan Blaze obligatorio** (sin él no hay egress a
+  Claude/Places); rewrite `/api/**` en `firebase.json` para evitar CORS; `timeoutSeconds: 300`,
+  `memory: 512MiB`; secrets vía `defineSecret` + Secret Manager.
+- En el schema de `trips`: añadir `profileId: string` (top-level) y `updatedAt`; fijar la convención de
+  fechas (ISO string vs `Timestamp`); nota del índice compuesto `profileId + updatedAt`.
 
 ### D.4 · `ai-agent-design.md`  *(resuelve B5, B6, B9, B14)*
-- En "Tools": documentar que la Cloud Function recibe `{tripId?, messages[]}` y devuelve
-  `{reply, tripId, itinerarySaved, error?}`.
+- En "Tools": documentar que la Cloud Function recibe `{profileId, tripId?, messages[]}` y devuelve
+  `{reply, tripId, itinerarySaved, error?}`; el backend inyecta `profileId` en el doc, el modelo no lo ve.
 - En el esqueleto del system prompt: añadir "incluye **siempre** vuelos, hospedaje y desglose de
   presupuesto en `save_itinerary`, aunque sean estimaciones".
 - En "Fase 3 — Guardado y edición": describir el caso "resume" vía `conversationContext`.
@@ -156,9 +173,10 @@ Los cambios al código (C16, C17, A2) son parte de FASE 0, no de esta tanda.
   `sendMessage({String? tripId, required List<ChatMessage> messages}) → Future<ChatResponse>`.
 - `chat_notifier.dart`: notar que `ChatState` guarda la lista completa de mensajes y es lo que se reenvía.
 
-### D.6 · `CLAUDE.md`  *(resuelve A1, C20)*
+### D.6 · `CLAUDE.md`  *(resuelve A1, A5, C20)*
 - "Stack": fijar `claude-opus-5` como el modelo.
-- Nueva línea en "Comandos clave" o una sección "Prerequisitos": Node 20+, Firebase CLI, FlutterFire CLI.
+- Nueva sección "Prerequisitos": Node 20+, Firebase CLI, FlutterFire CLI, **proyecto Firebase en plan Blaze**.
+- Nota: secrets solo en `functions/.env` (local) / Secret Manager (deploy), nunca commiteados.
 
 ### D.7 · `00-plan-equipo-timeline.md`  *(alineación con `03-fases.md`)*
 - Añadir una línea al inicio: "El desglose por dependencias y qué se paraleliza está en `03-fases.md`".
