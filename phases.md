@@ -26,23 +26,23 @@ dos horas de merge hell en FASE 2.
 
 > **Estado (2026-08-29) — buena parte ya hecha:**
 > ✅ Proyecto Firebase `mi-viaje-11d84` en **Blaze** · Firestore creado + reglas + índice `trips` desplegados ·
-> `flutterfire configure` → `lib/firebase_options.dart` · keys de Claude y Places en `functions/.env` **y**
-> Secret Manager · deps de Flutter añadidas · `functions/` scaffold + `npm install` · repo en GitHub con ramas.
-> ⏳ **Falta:** habilitar/confirmar "Places API" legacy + restringir la key en GCP · budget alert ·
-> limpiar el scaffold (`lib/main.dart`, `test/`) · `firebase init hosting` + primer deploy.
+> **Places API habilitada** · `flutterfire configure` → `lib/firebase_options.dart` · keys de Claude y Places
+> en `functions/.env` **y** Secret Manager · deps de Flutter añadidas · `functions/` scaffold + `npm install` ·
+> repo en GitHub con ramas.
+> ⏳ **Falta:** árbol de carpetas `lib/` · limpiar el scaffold (`lib/main.dart`, `test/`) ·
+> primer `firebase deploy --only functions`.
 
 Se divide en 3 frentes que corren **en paralelo**:
 
-### Frente 0.A — Cuentas, servicios y API keys — ✅ casi todo hecho
+### Frente 0.A — Cuentas, servicios y API keys — ✅ hecho
 - [x] **0.A.1** Proyecto Firebase `mi-viaje-11d84` en **plan Blaze**. `firebase login` = cavalgo01@gmail.com.
-- [ ] **budget alert** (~5 USD) en GCP Console → *Billing* → *Budgets & alerts*. **FALTA.**
 - [x] **0.A.2** Firestore creado. Reglas abiertas hasta **2026-09-28** (`firestore.rules`, desplegado).
       Índice compuesto `trips (profileId ASC, updatedAt DESC)` desplegado (`firestore.indexes.json`).
 - [x] **0.A.4** `flutterfire configure` → `lib/firebase_options.dart` (commiteado; su Web API key es pública).
 - [x] **0.A.5** API key de Anthropic → `functions/.env` + Secret Manager (`ANTHROPIC_API_KEY`).
 - [x] **0.A.6** API key de Google Places → `functions/.env` + Secret Manager (`GOOGLE_PLACES_API_KEY`).
-- [ ] En **GCP Console**: confirmar que la API habilitada es **"Places API"** (legacy, no solo "New")
-      y restringir la key a esa API. La URL de foto lleva la key → ver `auditoria.md` B10. **FALTA.**
+- [x] **Places API habilitada** en GCP. La URL de foto lleva la key (ver `auditoria.md` B10) —
+      *hardening opcional, no blocker:* restringir la key a "Places API" en GCP Console.
 - [x] **0.A.8** `functions/.env` (gitignored) + `functions/.env.example` (commiteado). Secrets de deploy
       seteados. Verificado: ninguna key en el historial de git.
 
@@ -65,7 +65,7 @@ Node 24 · npm 11 · Firebase CLI 15.28.2 · FlutterFire CLI 1.4.1 · Flutter 3.
       501; sirve para probar el rewrite y CORS). **FALTA.**
 
 **Salida de FASE 0:** repo vivo ✅, deps listas ✅, infra Firebase lista ✅.
-Falta: limpiar scaffold (0.C.2/0.C.3), primer deploy de la función (0.D.3), y los 2 pendientes de GCP.
+Falta: árbol de carpetas + limpiar scaffold (0.C.2/0.C.3) y primer deploy de la función (0.D.3).
 
 ---
 

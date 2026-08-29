@@ -20,14 +20,14 @@ Node 24, Firebase CLI 15.28.2, FlutterFire CLI 1.4.1 instalados. `firebase login
 ⏳ Pendiente (código FASE 0): `lib/main.dart` sigue siendo el contador; `test/widget_test.dart` idem (C16).
 
 ### A3 · Google Places / billing — ✅ RESUELTO
-Proyecto `mi-viaje-11d84` en **plan Blaze** (billing activo). Falta confirmar que la API habilitada sea
-**"Places API"** (legacy) y restringir la key a esa API en GCP Console.
+Proyecto `mi-viaje-11d84` en **plan Blaze** (billing activo). **Places API habilitada.**
+Hardening opcional (no blocker): restringir la key a "Places API" en GCP Console.
 
 ### A4 · Límite de versión de Dart — OK
 Deps resueltas sin conflicto de SDK (`flutter pub add` corrió limpio, `flutter analyze` sin issues).
 
 ### A5 · Cloud Functions requiere plan Blaze — ✅ RESUELTO
-El proyecto ya está en Blaze. Poner un **budget alert** (~5 USD) en GCP Console si no existe.
+El proyecto ya está en Blaze. (Budget alert = descartado por ahora, no es blocker para el demo.)
 
 ---
 
@@ -77,11 +77,11 @@ tolerar que falten (no crashear si `flights == null`).
 Esa URL se guarda en Firestore y la renderiza el navegador → **la key de Places viaja al cliente**
 dentro de la URL de la imagen. `mymds/rules.md` ("nunca en código Flutter, nunca en un commit") se cumple
 literalmente (no está en el código ni en un commit), pero la key sí queda expuesta en la red.
-→ **Decisión para el demo:** una sola key restringida a la **Places API** (no se puede restringir por
-IP — Cloud Functions gen 2 no tiene IP fija) + **budget alert** bajo en GCP. La exposición vía URL de
-foto es tolerable para el hackathon. Alternativa limpia si sobra tiempo: endpoint proxy
+→ **Decisión para el demo:** la exposición vía URL de foto es tolerable para el hackathon.
+Hardening opcional (no blocker): restringir la key a la **Places API** en GCP (no se puede por IP —
+Cloud Functions gen 2 no tiene IP fija). Alternativa limpia si sobra tiempo: endpoint proxy
 `/api/photo?ref=...` en la función (la key nunca llega al cliente), o una 2ª key solo-fotos restringida
-por referrer HTTP al dominio de Hosting.
+por referrer HTTP al dominio de Hosting. Rotar las keys después del evento (se compartieron en texto plano).
 
 ### B11 · Formato de la Places Photo API: legacy vs new
 `mymds/02-technical-architecture.md` usa el endpoint **legacy**:
