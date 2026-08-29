@@ -28,14 +28,14 @@ dos horas de merge hell en FASE 2.
 | FASE 0 — setup | ✅ cerrada |
 | FASE 1 — contratos + modelos + seed `trips/demo-seed` | ✅ cerrada (commit `299b2d5`) |
 | **TRACK A — backend del agente** | 🟡 **pasada 1 hecha** (commit `e3fcc1a`): `/api/chat` deployado, conversa + guarda en `trips` + edita (upsert) + reanuda por `conversationContext`. Probado en vivo 4×. **Falta:** A3 `search_places` (fotos/lugares reales), reintentos explícitos. |
-| **TRACK B — Flutter UI** | 🔴 **no empezada.** `lib/features/chat_agent/` y `lib/features/itinerary_view/` son solo scaffold (README + `.gitkeep`). `lib/main.dart` = shell placeholder. **Es la prioridad** — sin UI no hay demo. |
+| **TRACK B — Flutter UI** | ✅ **B1–B4 hechos** (merge `bde1928` en `main`). `chat_agent` (chat real contra `/api/chat`, historial completo, loading muy visible) + `itinerary_view` (timeline contra Firestore, header hero, días, `ActivityCard` con placeholder por categoría cuando no hay foto, vuelos/hospedaje/presupuesto). `HomeShell` responsivo: split chat‖timeline en pantalla ancha, pestañas en angosta; salta al itinerario al recibir `itinerarySaved`. Verificado end-to-end (chat → save → timeline) y contra `demo-seed`. `flutter analyze` limpio, `flutter test` verde. **Falta:** B5 (pulido de proyector, se solapa con FASE 3), continuidad de chat en `localStorage` (opcional). |
 | TRACK C — producto/pitch/QA | ⬜ pendiente |
-| FASE 2 — integración | bloqueada por TRACK B |
+| FASE 2 — integración | ✅ **de facto hecha** — el `ApiClient` ya apunta a la función real (URL cruda en dev, `/api` en release) y el flujo diagnóstico→propuesta→save→stream→timeline corre de punta a punta. Queda el shakeout formal (CORS en Hosting real, fotos, timeouts) en FASE 3/4. |
 
-**Siguiente paso recomendado:** TRACK B (rama `feature/ui`) — feature `chat_agent` (pantalla de chat
-contra `/api/chat` real) + `itinerary_view` (timeline leyendo Firestore, contra `trips/demo-seed`).
-A3 (Google Places) va **después** de que la UI funcione: es aditivo al backend y no bloquea nada;
-`demo-seed` ya trae fotos reales de Unsplash para construir el timeline.
+**Siguiente paso recomendado:** TRACK A A3 (`search_places` → fotos/lugares reales de Google Places;
+aditivo, no bloquea) y FASE 3 (pulido visual del timeline para proyector + escenario de respaldo
+ensayado). El itinerario ya renderiza bien con `demo-seed` (fotos Unsplash) y con itinerarios del
+agente (placeholder por categoría).
 
 ---
 
@@ -207,16 +207,19 @@ Recetas: `mymds/skills.md` 4–6.
 ## TRACK B — Flutter UI
 **Squad B · rama `feature/ui` · depende de: 0.C, 1.1 · el timeline usa el seed 1.4**
 
-| Paso | Qué | Depende de | Paralelo con |
-|---|---|---|---|
-| **B1** | App shell: `ProviderScope`, tema *aesthetic* del timeline (`core/theme/`), navegación chat ↔ itinerario. | 0.C.3 | — |
-| **B2** | `chat_agent`: `ChatRepository.sendMessage(...)` → `ApiClient` a la función; `ChatNotifier extends Notifier<ChatState>` (mensajes, loading, `tripId`); `ChatScreen` (burbujas + input; loading/error como `AsyncValue`). | B1, 1.1, 1.2 | **B3** |
-| **B3** | `itinerary_view`: `TripRepository` con `watchTrip(tripId)` **y** `watchCurrentTrip()` (query `profileId == PROFILE_ID` ordenada por `updatedAt` desc, limit 1) → `StreamProvider`; `ItineraryScreen` (header con resumen + días); `TimelineDay`; `ActivityCard` (foto con `cached_network_image`, hora, título, descripción, costo, tip). **Construir contra `trips/demo-seed`.** | B1, 1.1, 1.4 | **B2** |
-| **B4** | Wire chat → itinerario: cuando `ChatResponse.itinerarySaved == true`, navegar / mostrar link a `itinerary_view` con el `tripId`. | B2, B3 | — |
-| **B5** | Pulido visual del timeline (pantalla completa / proyector). Se solapa con FASE 3. | B3 | — |
+> **B1–B4 hechos** (merge `bde1928` en `main`, 2026-08-29). Hubo trabajo en paralelo sobre
+> `feature/ui` (dos implementaciones de B1+B3); se integró "lo mejor de cada archivo" en el merge.
 
-**Paralelo dentro del track:** B2 ∥ B3 (una persona cada uno) — es la división natural de Squad B.
-B3 no necesita nada del backend gracias al seed.
+| Paso | Qué | Estado |
+|---|---|---|
+| **B1** | App shell: `ProviderScope`, tema, navegación chat ↔ itinerario. | ✅ `HomeShell` responsivo (split chat‖timeline ancho / pestañas angosto). `main.dart` inicializa Firebase con `try/catch`. |
+| **B2** | `chat_agent`: `ChatRepository` → `ApiClient`; `ChatNotifier` (historial completo, loading, `tripId`, `lastSaveAt`); `ChatScreen` (burbujas, sugerencias, `ThinkingIndicator` muy visible, barra de error + reintento). | ✅ |
+| **B3** | `itinerary_view`: `TripRepository.watchCurrentTrip()` / `watchTrip()` → `currentTripProvider`; `ItineraryScreen` (`AsyncValue` + vacío); `ItineraryHeader`, `TimelineDay`, `ActivityCard`, `PlacePhoto` (placeholder por categoría), `trip_extras` (vuelos/hospedaje/presupuesto). Contra `trips/demo-seed`. | ✅ |
+| **B4** | Wire chat → itinerario: al recibir `itinerarySaved`, `HomeShell` salta al timeline (que ya se actualiza solo por el stream). | ✅ |
+| **B5** | Pulido visual del timeline (pantalla completa / proyector). Se solapa con FASE 3. | ⬜ pendiente |
+
+**Nota de proceso:** una rama `feature/*` la pueden tocar varias personas — antes de `push`,
+`git fetch` + revisar. Si dos hicieron lo mismo, se resuelve el merge a mano (no `--force`).
 
 ---
 
