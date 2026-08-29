@@ -13,6 +13,7 @@ const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const express = require("express");
+const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 
 // Schemas de las tools — fuente de verdad compartida, congelada en FASE 1.
@@ -25,6 +26,11 @@ const GOOGLE_PLACES_API_KEY = defineSecret("GOOGLE_PLACES_API_KEY");
 admin.initializeApp();
 
 const app = express();
+// En prod Flutter llama a /api/** (mismo origen vía rewrite de Hosting) y CORS
+// no aplica. Pero en dev (`flutter run -d chrome`) la llamada es cross-origin;
+// refleja el origin para no bloquearla. La API no tiene auth, mismo modelo que
+// las reglas abiertas de Firestore (ver auditoria.md B12).
+app.use(cors({ origin: true }));
 app.use(express.json());
 
 // Inspección del contrato de tools congelado en FASE 1 (útil para Track A/B/C).
