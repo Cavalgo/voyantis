@@ -20,7 +20,7 @@ Convenciones y decisiones fijas: `rules.md`. Fases: `phases.md` (raíz).
 ## 3. Recuperar "el viaje actual" (sin auth, perfil fijo)
 ```dart
 // lib/core/config.dart
-const String kProfileId = 'voyanties-demo';
+const String kProfileId = 'voyantis-demo';
 
 // trip_repository.dart
 Stream<Trip?> watchCurrentTrip() {

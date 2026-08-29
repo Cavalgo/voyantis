@@ -1,4 +1,4 @@
-# Fases de Desarrollo — Voyanties
+# Fases de Desarrollo — Voyantis
 
 > Este documento ordena el trabajo por **dependencias** y marca qué se puede hacer **en paralelo**.
 > Complementa a `mymds/00-plan-equipo-timeline.md` (que da el reloj del día); aquí está el grafo de
@@ -125,7 +125,7 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
   ```jsonc
   // POST /api/chat  — request
   {
-    "profileId": "voyanties-demo",        // perfil fijo único (ver "Identidad" abajo)
+    "profileId": "voyantis-demo",        // perfil fijo único (ver "Identidad" abajo)
     "tripId": "abc123 | null",            // null en el primer mensaje
     "messages": [                          // historial COMPLETO, Flutter lo mantiene y lo reenvía
       { "role": "user", "content": "..." },
@@ -150,7 +150,7 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
 
 - **1.4 — Seed de Firestore** (`trips/demo-seed`): crear **a mano** en la consola de Firestore un
   documento `trips` completo, con 2–3 días y 3–4 actividades con `photoUrl` real y
-  `profileId: "voyanties-demo"`.
+  `profileId: "voyantis-demo"`.
   **Esto es lo que desbloquea a Squad B**: pueden construir todo el timeline visual leyendo este doc,
   sin esperar a que el backend funcione. Además es el **escenario de respaldo** para el pitch en vivo.
 
@@ -159,7 +159,7 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
 ### Identidad y "no romperse al recargar"  *(decisión tomada — opción 1: perfil fijo, sin auth)*
 
 **No hay auth. No hay perfiles todavía.** Hay **un solo perfil**, con un ID fijo inventado una vez
-y hardcodeado: constante `PROFILE_ID = "voyanties-demo"` en `lib/core/config.dart`. Al estar en el
+y hardcodeado: constante `PROFILE_ID = "voyantis-demo"` en `lib/core/config.dart`. Al estar en el
 código fuente, **cada reload usa el mismo ID** sin depender de memoria ni de `localStorage`.
 Todo `trip` que crea el backend lleva ese `profileId`.
 

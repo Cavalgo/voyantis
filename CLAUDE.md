@@ -3,7 +3,7 @@
 ## Qué es este proyecto
 Agente conversacional que diagnostica el perfil de un viajero y genera un itinerario de viaje visual
 y estructurado (vuelos, hospedaje, actividades día por día, presupuesto). Construido en un hackathon
-de ~4 horas con demo/pitch al final del día. Nombre: **Voyanties**.
+de ~4 horas con demo/pitch al final del día. Nombre: **Voyantis**.
 
 ## Contexto de tiempo — MUY IMPORTANTE
 Esto es un demo de hackathon, no producción. La prioridad #1 es **una demo funcional y visualmente
@@ -27,7 +27,7 @@ Node 20+ · Firebase CLI · FlutterFire CLI · proyecto Firebase en **plan Blaze
 Flutter ya está (3.47.1 / Dart 3.13.1).
 
 ## Decisiones ya tomadas (no re-discutir — ver `mymds/rules.md`)
-- **Sin Auth.** Perfil fijo `PROFILE_ID = "voyanties-demo"` en `lib/core/config.dart`; la app muestra
+- **Sin Auth.** Perfil fijo `PROFILE_ID = "voyantis-demo"` en `lib/core/config.dart`; la app muestra
   siempre el último `trip` de la DB con ese `profileId`.
 - El chat reenvía el **historial completo** de mensajes en cada request (Claude API es stateless).
 - Flutter llama a `/api/**` (rewrite de Hosting), nunca a la URL cruda de la función (CORS).

@@ -10,7 +10,7 @@ El desglose de fases está en `phases.md` (raíz); los problemas conocidos en `a
 | Tema | Decisión |
 |---|---|
 | Modelo de Claude | `claude-opus-5` |
-| Auth | **Ninguna.** Perfil fijo `PROFILE_ID = "voyanties-demo"` en `lib/core/config.dart` |
+| Auth | **Ninguna.** Perfil fijo `PROFILE_ID = "voyantis-demo"` en `lib/core/config.dart` |
 | Historial de chat | Flutter mantiene la lista completa de mensajes y la reenvía entera en cada request |
 | Llamadas al backend | Flutter llama a `/api/**` (rewrite de Hosting), **nunca** a la URL cruda de la función |
 | Fechas | ISO 8601 string (`"2026-08-29"` / `"2026-08-29T14:00:00Z"`) en todo: Firestore, JSON, modelos |
@@ -63,7 +63,7 @@ o un mensaje de error.
 ```jsonc
 // POST /api/chat
 // request
-{ "profileId": "voyanties-demo", "tripId": "abc | null", "messages": [ {"role":"user","content":"..."} ] }
+{ "profileId": "voyantis-demo", "tripId": "abc | null", "messages": [ {"role":"user","content":"..."} ] }
 // response
 { "reply": "...", "tripId": "abc", "itinerarySaved": true, "error": null }
 ```

@@ -65,7 +65,7 @@ No es un bug, pero conviene fijar "**trip = itinerario**" y no introducir una co
 vuelve a su viaje tras recargar (el `tripId` vive solo en memoria de Flutter). En Flutter **Web no
 existe un device-id confiable**.
 → **Decisión (opción 1):** **sin auth**. Un **perfil fijo único** — constante `PROFILE_ID` en
-`lib/core/config.dart` (ej. `"voyanties-demo"`). Todo `trip` lleva `profileId`. Al recargar, el
+`lib/core/config.dart` (ej. `"voyantis-demo"`). Todo `trip` lleva `profileId`. Al recargar, el
 itinerario se recupera con `trips.where(profileId == PROFILE_ID).orderBy(updatedAt desc).limit(1)`.
 Opcional: `localStorage` para la continuidad del chat durante la fase de diagnóstico.
 → **Impacto:** `ChatRequest` gana `profileId`; el doc `trips` gana `profileId` (top-level, lo escribe
@@ -124,7 +124,7 @@ y el backend carga `conversationContext` del doc y lo inyecta como contexto.
 
 | # | Hallazgo | Acción sugerida |
 |---|---|---|
-| C15 | `mymds/01-business-overview.md` dice "[Nombre del Proyecto]" y lista opciones de nombre. El repo/carpeta ya es `voyanties`. | Fijar "**Voyanties**", quitar la lista. |
+| C15 | `mymds/01-business-overview.md` dice "[Nombre del Proyecto]" y lista opciones de nombre. El nombre es **Voyantis** (repo `voyantis`; la carpeta local `voyanties` es un typo). | Fijar "**Voyantis**", quitar la lista. |
 | C16 | `test/widget_test.dart` prueba el contador → romperá `flutter analyze` / `flutter test` al reescribir `main.dart`. `mymds/rules.md` dice sin tests hoy. | Borrarlo o dejar un stub trivial. |
 | C17 | `README.md` y `pubspec.yaml` (`description:`) siguen en "A new Flutter project". | Actualizar con una línea real del proyecto. |
 | C18 | `mymds/rules.md` propone ramas `feature/agente`, `feature/ui`, `feature/datos`. Squad A cubre "Agente & Datos" → `feature/agente` y `feature/datos` son el mismo squad, se solapan. | Alinear a `feature/agent` + `feature/ui`; Squad C trabaja en `main` (solo docs). |
@@ -141,7 +141,7 @@ y el backend carga `conversationContext` del doc y lo inyecta como contexto.
 Los cambios al código (C16, C17, A2) son parte de FASE 0.
 
 ### D.1 · `mymds/01-business-overview.md`  *(resuelve C15)* — PENDIENTE
-- Título: `# Business Overview — [Nombre del Proyecto]` → `# Business Overview — Voyanties`.
+- Título: `# Business Overview — [Nombre del Proyecto]` → `# Business Overview — Voyantis`.
 - Borrar la línea de "*Ideas de nombre (opcionales...)*".
 
 ### D.2 · `mymds/rules.md`  *(resuelve C18, B8)* — ✅ APLICADO
