@@ -2,14 +2,15 @@
  * agent.js — el agente de Voyantis: system prompt + loop manual de tool use.
  *
  * Lo llama `index.js` desde `POST /chat`. Modelo: claude-opus-5 (rules.md).
- * Tools: por ahora solo `save_itinerary` (search_places llega en la siguiente pasada).
+ * Tools: `search_places` (Google Places, ver ./places.js) + `save_itinerary` (upsert a `trips`).
  * Ver ../mymds/ai-agent-design.md y ../phases.md (TRACK A).
  */
 const Anthropic = require("@anthropic-ai/sdk");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 
-const { SAVE_ITINERARY_TOOL } = require("./tools");
+const { SEARCH_PLACES_TOOL, SAVE_ITINERARY_TOOL } = require("./tools");
+const { searchPlaces } = require("./places");
 
 const MODEL = "claude-opus-5";
 // El turno de guardado emite el itinerario completo como JSON (2-4k tokens) +
@@ -17,14 +18,15 @@ const MODEL = "claude-opus-5";
 // Con este max_tokens hay que usar streaming (el SDK rechaza no-streaming por el
 // límite de 10 min); igual no hacemos SSE al cliente, solo `.finalMessage()`.
 const MAX_TOKENS = 32000;
-const MAX_ITERATIONS = 8;
+// Con search_places el agente encadena varias búsquedas antes de proponer/guardar,
+// así que damos más vueltas que con save_itinerary solo. Es un techo de seguridad:
+// el flujo normal (unas búsquedas + 1 save + 1 confirmación) usa ~4-6.
+const MAX_ITERATIONS = 12;
 // "high" da itinerarios un poco mejores pero cada turno tarda 45-120s — demasiado
 // para el pitch en vivo. "medium" baja a ~20-40s con calidad muy pareja.
 const EFFORT = "medium";
 
-// Tools activas esta pasada. `search_places` está en tools.js (contrato congelado)
-// pero todavía no se implementa, así que no se le ofrece al modelo.
-const ACTIVE_TOOLS = [SAVE_ITINERARY_TOOL];
+const ACTIVE_TOOLS = [SEARCH_PLACES_TOOL, SAVE_ITINERARY_TOOL];
 
 const SYSTEM_PROMPT = `Eres Voyantis, un planeador de viajes experto y cálido. Hablas español, con tono cercano y entusiasta — como un amigo que sabe muchísimo de viajes, nunca como un formulario.
 
@@ -45,8 +47,13 @@ desconectar) y restricciones (alimenticias, movilidad, lo que mencionen).
   propuesta en vez de seguir preguntando.
 
 FASE DE PROPUESTA:
-Presenta un resumen claro y legible del itinerario propuesto (destino, fechas, días con sus
-actividades, hospedaje, vuelos estimados, presupuesto). Pide confirmación explícita antes de
+Antes de armar la propuesta, usa la tool search_places para los lugares principales del viaje
+(restaurantes, atracciones, miradores, museos y el hotel): búscala por destino + categoría, con
+keywords útiles ("comida local", "vista panorámica", "hotel boutique céntrico"…). Puedes lanzar
+varias búsquedas en paralelo. Así anclas cada actividad a un lugar que existe y consigues fotos
+reales. Si una búsqueda vuelve vacía, propón un lugar real que conozcas y sigue.
+Luego presenta un resumen claro y legible del itinerario propuesto (destino, fechas, días con
+sus actividades, hospedaje, vuelos estimados, presupuesto). Pide confirmación explícita antes de
 guardar. Si piden cambios, ajusta y vuelve a mostrar el resumen. NO guardes hasta tener un "sí"
 claro del usuario.
 
@@ -55,7 +62,9 @@ Solo con el "sí" explícito, llama a la tool save_itinerary con el itinerario c
 - Fechas SIEMPRE como string ISO 8601: "2026-09-18", o con hora "2026-09-18T14:00:00-06:00".
 - Incluye SIEMPRE flights, accommodation y budgetBreakdown, aunque sean estimaciones — el
   itinerario visual siempre los muestra. Los vuelos y el hotel pueden ser simulados y realistas.
-- Deja location.photoUrl como string vacío ("") en todas las actividades. No inventes URLs.
+- En cada location copia lo que devolvió search_places para ese lugar: name, address, lat, lng,
+  category y photoUrl TAL CUAL. Nunca inventes URLs ni coordenadas. Si no hubo resultado para un
+  lugar, deja photoUrl como "" y omite lat/lng. Marca instagrammable según el perfil del viajero.
 - Mantén conversationContext actualizado y útil en cada save: resumen del perfil del viajero,
   decisiones tomadas y qué quedó pendiente. Es lo que te permite retomar una edición si el
   usuario recarga la página y vuelve más tarde.
@@ -77,6 +86,20 @@ function textOf(message) {
 
 /** Implementación de las tools. Devuelve siempre un objeto con `ok: boolean`. */
 async function executeTool(name, input, ctx) {
+  if (name === "search_places") {
+    try {
+      return await searchPlaces(input || {}, ctx.placesApiKey);
+    } catch (e) {
+      logger.error("search_places failed", e);
+      // No es error duro: el agente sigue sin fotos.
+      return {
+        ok: true,
+        results: [],
+        warning: `search_places falló: ${String((e && e.message) || e)}`,
+      };
+    }
+  }
+
   if (name === "save_itinerary") {
     try {
       const db = admin.firestore();
@@ -125,7 +148,14 @@ async function executeTool(name, input, ctx) {
  * Loop manual de tool use.
  * @returns {Promise<{reply:string, currentTripId:(string|null), itinerarySaved:boolean, capped?:boolean, refused?:boolean}>}
  */
-async function runAgent({ apiKey, profileId, tripId, messages, priorContext }) {
+async function runAgent({
+  apiKey,
+  placesApiKey,
+  profileId,
+  tripId,
+  messages,
+  priorContext,
+}) {
   const client = new Anthropic({ apiKey });
 
   const system = priorContext
@@ -182,6 +212,7 @@ async function runAgent({ apiKey, profileId, tripId, messages, priorContext }) {
       const out = await executeTool(block.name, block.input, {
         profileId,
         currentTripId,
+        placesApiKey,
       });
       if (block.name === "save_itinerary" && out.ok) {
         currentTripId = out.tripId;

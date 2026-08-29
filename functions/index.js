@@ -62,6 +62,7 @@ app.post("/chat", async (req, res) => {
   try {
     const r = await runAgent({
       apiKey: ANTHROPIC_API_KEY.value(),
+      placesApiKey: GOOGLE_PLACES_API_KEY.value(),
       profileId,
       tripId: tripId || null,
       messages,
