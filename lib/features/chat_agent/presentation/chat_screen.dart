@@ -41,11 +41,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _send([String? preset]) {
+    // Mientras el agente responde, ignoramos el envío pero NO tocamos el campo
+    // (dejamos que el usuario siga escribiendo su borrador).
+    if (ref.read(chatNotifierProvider).isLoading) return;
     final text = preset ?? _input.text;
     if (text.trim().isEmpty) return;
     _input.clear();
     ref.read(chatNotifierProvider.notifier).send(text);
-    _focus.requestFocus();
     _jumpToBottom();
   }
 
@@ -304,15 +306,17 @@ class _InputBar extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 focusNode: focusNode,
-                enabled: enabled,
+                // NUNCA se deshabilita: en Flutter web, alternar `enabled` mientras
+                // el campo tiene foco rompe el <input> y el 2º mensaje no escribe.
+                // El envío se ignora aparte mientras `!enabled` (ver _send / _SendButton).
                 minLines: 1,
                 maxLines: 5,
                 textInputAction: TextInputAction.send,
-                onSubmitted: enabled ? (_) => onSend() : null,
+                onSubmitted: (_) => onSend(),
                 decoration: InputDecoration(
                   hintText: enabled
                       ? 'Escribe tu mensaje…'
-                      : 'Voyantis está trabajando…',
+                      : 'Puedes ir escribiendo el siguiente…',
                   filled: true,
                   fillColor: AppColors.card,
                   contentPadding:
