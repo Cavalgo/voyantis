@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/place_images.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// Foto de un lugar. Tolera `photoUrl` vacío (lo normal en itinerarios que crea
-/// el agente hoy) con un placeholder degradado + icono por categoría.
+/// Foto de un lugar. Si no viene `photoUrl` (lo normal en itinerarios que crea
+/// el agente hoy) usa una foto genérica por categoría; si tampoco hay categoría
+/// reconocible, cae a un placeholder degradado + icono.
 class PlacePhoto extends StatelessWidget {
   const PlacePhoto({
     super.key,
@@ -24,15 +26,17 @@ class PlacePhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(borderRadius);
+    // photoUrl real > foto genérica por categoría > placeholder degradado.
+    final url = photoUrl.isNotEmpty ? photoUrl : defaultPhotoFor(category);
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: photoUrl.isEmpty
+        child: url.isEmpty
             ? _Placeholder(category: category, name: name)
             : CachedNetworkImage(
-                imageUrl: photoUrl,
+                imageUrl: url,
                 fit: BoxFit.cover,
                 fadeInDuration: const Duration(milliseconds: 250),
                 placeholder: (_, _) => Container(
