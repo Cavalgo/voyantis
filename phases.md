@@ -159,9 +159,19 @@ Convergen en FASE 2.
 ## TRACK A — Backend del agente
 **Squad A · rama `feature/agent` · depende de: 1.2, 1.3**
 
-Punto de partida: **`functions/index.js` ya tiene el esqueleto** — Express, `POST /chat`, `defineSecret`
-para las 2 keys, `onRequest` con `timeoutSeconds: 300` / `memory: "512MiB"` / `region: "us-central1"`.
-Hoy devuelve `501 not_implemented`. Recetas: `mymds/skills.md` 4–6. `npm install` ya está hecho.
+> **Pasada 1 hecha (2026-08-29):** `/api/chat` funciona end-to-end. `functions/agent.js` tiene el
+> `SYSTEM_PROMPT` y `runAgent()` (loop manual de tool use, `claude-opus-5`, `effort: medium`,
+> `max_tokens: 32000` vía streaming interno — sin SSE al cliente —, tope 8 iteraciones);
+> `functions/index.js` llama al agente, carga `conversationContext` del doc si viene
+> `tripId` (reanudar edición) y degrada errores a `200` con `error` en vez de crashear. La tool
+> `save_itinerary` hace upsert a `trips` con `profileId` + `updatedAt`/`createdAt` serverTimestamp y
+> devuelve el `tripId`. Probado con `node scripts/chat_smoke.mjs` (crea) y `--edit <tripId>`
+> (actualiza el mismo doc). **Falta:** A3 `search_places` (el agente deja `photoUrl: ""`), reintentos
+> explícitos, reinyectar el itinerario completo al editar.
+> Checklist abajo: **A1 ✅ · A2 ✅ · A4 ✅ · A5 ✅(parcial) · A6 ✅(parcial) · A3 ⬜**.
+
+Punto de partida original: `functions/index.js` tenía el esqueleto (devolvía `501`).
+Recetas: `mymds/skills.md` 4–6.
 
 | Paso | Qué | Depende de | Paralelo con |
 |---|---|---|---|

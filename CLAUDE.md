@@ -47,11 +47,13 @@ lib/
     chat_agent/      → data / domain / presentation   (rama feature/ui)
     itinerary_view/  → data / domain / presentation   (rama feature/ui)
 functions/           → Cloud Function del agente        (rama feature/agent)
-  index.js           → esqueleto: /chat, defineSecret, timeout 300s (deployado, devuelve 501); GET /tools
+  index.js           → handler POST /chat (llama al agente, degrada errores) + GET /tools; onRequest 300s
+  agent.js           → TRACK A: SYSTEM_PROMPT + runAgent() (loop manual de tool use) + save_itinerary
   tools.js           → FASE 1: input_schema de search_places / save_itinerary (fuente de verdad compartida)
   .secret.local.example → plantilla de keys (los valores van en .secret.local — solo emulador, gitignored)
 scripts/
   seed_firestore.mjs → escribe trips/demo-seed (seed de FASE 1.4 + fallback del pitch)
+  chat_smoke.mjs     → prueba end-to-end de /api/chat (guion de chat + verifica el doc en Firestore)
 ```
 
 ## Comandos clave

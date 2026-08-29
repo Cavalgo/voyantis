@@ -1,26 +1,28 @@
 /**
  * Cloud Function proxy — Voyantis
- * Flutter (/api/chat)  ->  esta función  ->  Claude API (tool use) + Google Places + Firestore
+ * Flutter (/api/chat)  ->  esta función  ->  Claude API (tool use) + Firestore
  *
- * ESQUELETO. Track A (rama feature/agent) implementa el loop del agente aquí.
- * Ver: ../phases.md (TRACK A) · ../mymds/ai-agent-design.md · ../mymds/skills.md (recetas 4-6)
+ * El loop del agente vive en ./agent.js. Ver: ../phases.md (TRACK A) ·
+ * ../mymds/ai-agent-design.md · ../mymds/skills.md (recetas 4-6).
  *
  * Secrets: NO están en este archivo. Emulador -> functions/.secret.local (gitignored) ;
  * deploy -> Secret Manager (`firebase functions:secrets:set`). Ver ../mymds/rules.md § Secrets.
  */
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
+const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const express = require("express");
+const Anthropic = require("@anthropic-ai/sdk");
 
 // Schemas de las tools — fuente de verdad compartida, congelada en FASE 1.
 const { TOOLS } = require("./tools");
+const { runAgent } = require("./agent");
 
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const GOOGLE_PLACES_API_KEY = defineSecret("GOOGLE_PLACES_API_KEY");
 
 admin.initializeApp();
-const db = admin.firestore();
 
 const app = express();
 app.use(express.json());
@@ -33,21 +35,49 @@ app.get("/tools", (_req, res) => {
 // Flutter llama a /api/chat (rewrite en firebase.json -> sin CORS).
 app.post("/chat", async (req, res) => {
   const { profileId, tripId, messages } = req.body || {};
-  if (!profileId || !Array.isArray(messages)) {
-    return res.status(400).json({ error: "profileId y messages[] son requeridos" });
+  if (!profileId || !Array.isArray(messages) || messages.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "profileId y messages[] (no vacío) son requeridos" });
   }
 
-  // TODO Track A: loop manual de tool use con Claude (claude-opus-5).
-  //   - system prompt de mymds/ai-agent-design.md
-  //   - tools: TOOLS (de ./tools.js) -> search_places (Google Places), save_itinerary (upsert a `trips`)
-  //   - save_itinerary escribe profileId (req.body.profileId) + updatedAt (serverTimestamp) en el doc
-  //   - devolver { reply, tripId, itinerarySaved, error }
-  return res.status(501).json({
-    reply: null,
-    tripId: tripId || null,
-    itinerarySaved: false,
-    error: "not_implemented",
-  });
+  // Reanudar tras recarga: si viene un tripId, cargar el conversationContext del doc
+  // para que el agente pueda retomar la edición sin el historial completo (auditoria B14).
+  let priorContext = null;
+  if (tripId) {
+    try {
+      const snap = await admin.firestore().collection("trips").doc(tripId).get();
+      if (snap.exists) priorContext = snap.data().conversationContext || null;
+    } catch (e) {
+      logger.warn("no se pudo cargar conversationContext", e);
+    }
+  }
+
+  try {
+    const r = await runAgent({
+      apiKey: ANTHROPIC_API_KEY.value(),
+      profileId,
+      tripId: tripId || null,
+      messages,
+      priorContext,
+    });
+    return res.status(200).json({
+      reply: r.reply,
+      tripId: r.currentTripId,
+      itinerarySaved: r.itinerarySaved,
+      error: r.capped ? "max_iterations" : null,
+    });
+  } catch (e) {
+    logger.error("agent error", e);
+    const rateLimited = e instanceof Anthropic.RateLimitError;
+    return res.status(200).json({
+      reply:
+        "Uy, tuve un problema procesando eso. ¿Puedes intentarlo de nuevo en un momento?",
+      tripId: tripId || null,
+      itinerarySaved: false,
+      error: rateLimited ? "rate_limited" : "upstream_error",
+    });
+  }
 });
 
 exports.api = onRequest(
