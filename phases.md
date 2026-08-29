@@ -1,8 +1,8 @@
 # Fases de Desarrollo — Voyanties
 
 > Este documento ordena el trabajo por **dependencias** y marca qué se puede hacer **en paralelo**.
-> Complementa a `00-plan-equipo-timeline.md` (que da el reloj del día); aquí está el grafo de qué
-> bloquea a qué. Antes de tocar código, lee también `04-auditoria.md`.
+> Complementa a `mymds/00-plan-equipo-timeline.md` (que da el reloj del día); aquí está el grafo de
+> qué bloquea a qué. Antes de tocar código, lee también `auditoria.md`.
 
 ---
 
@@ -49,12 +49,12 @@ el proyecto, no da acceso; la seguridad está en las reglas de Firestore).
 Vive **solo** como secret de la Cloud Function (ver 0.A.8).
 
 **0.A.6 — API key de Google (Places):**
-- Google Cloud Console (mismo proyecto) → *APIs & Services* → habilitar **"Places API"** (la legacy — ver `04-auditoria.md` #11).
+- Google Cloud Console (mismo proyecto) → *APIs & Services* → habilitar **"Places API"** (la legacy — ver `auditoria.md` #11).
 - *Credentials* → *Create credentials* → *API key* → `AIza...`.
 - Restringir: *API restrictions* → solo "Places API". (No se puede restringir por IP: las Cloud
   Functions gen 2 no tienen IP fija → compensar con el budget alert.)
 - Vive como secret de la función. Si las URLs de foto se guardan crudas en Firestore, la key queda
-  visible en el cliente (`04-auditoria.md` #10) → si sobra tiempo, endpoint proxy `/api/photo`.
+  visible en el cliente (`auditoria.md` #10) → si sobra tiempo, endpoint proxy `/api/photo`.
 
 **0.A.7 — Billing GCP:** el upgrade a Blaze de 0.A.1 ya activa billing en el proyecto de Google Cloud,
 que es lo que Places API exige. Confirmar en Cloud Console → *Billing* que el proyecto tiene cuenta ligada.
@@ -87,8 +87,8 @@ que es lo que Places API exige. Confirmar en Cloud Console → *Billing* que el 
 ### Frente 0.C — Scaffold de código
 - **0.C.1** Añadir dependencias a `pubspec.yaml`:
   `flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`, `google_fonts`,
-  `cached_network_image`, `intl`. Correr `flutter pub get`. (Riverpod **sin** codegen — ver `rules.md`.)
-- **0.C.2** Crear el árbol de carpetas (ver `flutter-architecture-features.md`):
+  `cached_network_image`, `intl`. Correr `flutter pub get`. (Riverpod **sin** codegen — ver `mymds/rules.md`.)
+- **0.C.2** Crear el árbol de carpetas (ver `mymds/flutter-architecture-features.md`):
   ```
   lib/core/{models,services,theme}/
   lib/features/chat_agent/{data,domain,presentation/widgets}/
@@ -118,7 +118,7 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
 
 - **1.1 — Modelos Dart** (`lib/core/models/`): `Trip`, `TravelerProfile`, `Summary`, `Flight`,
   `Accommodation`, `Day`, `Activity`, `Location`, `BudgetBreakdown`.
-  Cada uno con `fromJson` / `toJson` **exactamente** alineados al schema de `02-technical-architecture.md`.
+  Cada uno con `fromJson` / `toJson` **exactamente** alineados al schema de `mymds/02-technical-architecture.md`.
   Ojo con fechas (guardar como ISO string o `Timestamp` — decidir **una** convención).
 
 - **1.2 — Contrato HTTP** Cloud Function ↔ Flutter (congelar los nombres de campos):
@@ -140,12 +140,12 @@ Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desa
     "error": null
   }
   ```
-  > Por qué el historial completo: Claude API es *stateless*. Ver `04-auditoria.md` #5 y #6.
+  > Por qué el historial completo: Claude API es *stateless*. Ver `auditoria.md` #5 y #6.
   > El backend escribe `profileId` en el doc `trips` (lo toma del request, **no** del modelo).
   > El doc `trips` gana un campo top-level `"profileId": "string"`.
 
 - **1.3 — Schema de los tools** (`search_places`, `save_itinerary`): copiar los `input_schema` de
-  `ai-agent-design.md` a un JSON compartido en `functions/` y usarlo como fuente de verdad.
+  `mymds/ai-agent-design.md` a un JSON compartido en `functions/` y usarlo como fuente de verdad.
   Confirmar qué campos devuelve `search_places` (name, address, lat, lng, rating, photoUrl, category).
 
 - **1.4 — Seed de Firestore** (`trips/demo-seed`): crear **a mano** en la consola de Firestore un
@@ -193,7 +193,7 @@ Convergen en FASE 2.
 | **A2** | Loop de tools (manual agentic loop): `while stop_reason == "tool_use"` → ejecutar tool → devolver `tool_result` → repetir hasta `end_turn`. Tope de seguridad (~8 iteraciones). | A1 | — |
 | **A3** | `search_places`: Google Places **Text Search** + construir la URL de la foto en el backend. Devolver `{name, address, lat, lng, rating, photoUrl, category}`. | A2 | **A4** |
 | **A4** | `save_itinerary`: upsert a la colección `trips` (Firebase Admin SDK). Generar `tripId` si falta, devolverlo, setear `itinerarySaved: true`. Escribir `profileId` (del request) y `updatedAt` (server timestamp) en el doc. | A2 | **A3** |
-| **A5** | System prompt (de `ai-agent-design.md`) + persistir `conversationContext` en el doc para poder reanudar ediciones tras recarga. Instruir al agente a **siempre** incluir flights / accommodation / budget. | A2 | — |
+| **A5** | System prompt (de `mymds/ai-agent-design.md`) + persistir `conversationContext` en el doc para poder reanudar ediciones tras recarga. Instruir al agente a **siempre** incluir flights / accommodation / budget. | A2 | — |
 | **A6** | Config de la función: **timeout 300s, memoria 512MB**. Manejo de errores (429 / 5xx de Claude) → respuesta degradada, nunca crash. | A1 | — |
 
 **Paralelo dentro del track:** A3 ∥ A4 (una persona cada uno) una vez que A2 existe.
@@ -283,18 +283,15 @@ el backend (A1→A2→A4→A5) es la cadena tensa.
 
 ## Git — flujo del repo
 
+Repo: **https://github.com/Cavalgo/voyantis** — ya inicializado, con `main`, `feature/agent` y `feature/ui`.
+
 ```bash
-git init -b main
-# (ver .gitignore: functions/node_modules/, .firebase/, .env, functions/.env, *.log)
-git add -A
-git commit -m "Scaffold inicial + docs de planeación"
-git remote add origin <URL-del-repo>
-git push -u origin main
-git branch feature/agent
-git branch feature/ui
+git clone https://github.com/Cavalgo/voyantis.git
+cd voyantis
+git checkout feature/agent   # Squad A   (o feature/ui — Squad B)
 ```
 
 - Una rama por track: `feature/agent` (Squad A), `feature/ui` (Squad B). Squad C trabaja en `main` (solo docs).
 - Commits pequeños y frecuentes. Merge a `main` en cuanto algo funcione localmente — sin PR review formal hoy.
 - Si algo rompe `main`: revertir el commit de inmediato, no debuggear sobre la rama compartida.
-- Secrets (Anthropic, Google Places): **solo** en env vars de la Cloud Function. Nunca en un commit.
+- Secrets (Anthropic, Google Places): `functions/.env` local (gitignored) + `firebase functions:secrets:set` para deploy. Nunca en un commit. Ver `mymds/rules.md` § Secrets.

@@ -1,11 +1,32 @@
 # Rules — Convenciones para hoy
 
+Reglas cortas y no negociables para que 7 personas trabajen en paralelo sin pisarse.
+El desglose de fases está en `phases.md` (raíz); los problemas conocidos en `auditoria.md` (raíz).
+
+---
+
+## Decisiones fijas (no re-discutir)
+
+| Tema | Decisión |
+|---|---|
+| Modelo de Claude | `claude-opus-5` |
+| Auth | **Ninguna.** Perfil fijo `PROFILE_ID = "voyanties-demo"` en `lib/core/config.dart` |
+| Historial de chat | Flutter mantiene la lista completa de mensajes y la reenvía entera en cada request |
+| Llamadas al backend | Flutter llama a `/api/**` (rewrite de Hosting), **nunca** a la URL cruda de la función |
+| Fechas | ISO 8601 string (`"2026-08-29"` / `"2026-08-29T14:00:00Z"`) en todo: Firestore, JSON, modelos |
+| Colección Firestore | `trips` (un doc = un itinerario). Siempre escribir `updatedAt` (server timestamp) y `profileId` |
+| Cloud Function | Node 20, Functions **v2**, `timeoutSeconds: 300`, `memory: "512MiB"` |
+
+---
+
 ## Riverpod: SIN code generation
-Usen `NotifierProvider` / `StreamProvider` / `Provider` escritos a mano, **no** `@riverpod` con `build_runner`. Razón: con 7 personas commiteando en paralelo, los archivos `.g.dart` generados causan conflictos de merge constantes y `build_runner watch` es una fricción que hoy no vale la pena. Ejemplo del patrón esperado:
+
+`NotifierProvider` / `StreamProvider` / `Provider` escritos a mano, **no** `@riverpod` con `build_runner`.
+Razón: con 7 personas commiteando en paralelo, los `.g.dart` generan conflictos de merge constantes.
 
 ```dart
-final tripProvider = StreamProvider.family<Trip, String>((ref, tripId) {
-  return FirestoreService.instance.tripStream(tripId);
+final currentTripProvider = StreamProvider<Trip?>((ref) {
+  return TripRepository.instance.watchCurrentTrip(); // query profileId == PROFILE_ID
 });
 
 class ChatNotifier extends Notifier<ChatState> {
@@ -20,24 +41,55 @@ class ChatNotifier extends Notifier<ChatState> {
 ```
 
 ## Arquitectura
-Ver `flutter-architecture-features.md` para la estructura de carpetas por feature. Regla simple: **no llamar Firestore/HTTP directamente desde un widget** — siempre pasa por un repository, consumido por un provider/notifier.
+
+Ver `flutter-architecture-features.md` para la estructura de carpetas por feature. Regla simple:
+**no llamar Firestore/HTTP directamente desde un widget** — siempre pasa por un repository,
+consumido por un provider/notifier.
 
 ## Manejo de loading/error
-Todo dato que venga de Firestore o del backend se maneja como `AsyncValue` (loading / data / error) en Riverpod. Nunca dejar una pantalla en blanco sin feedback — mínimo un `CircularProgressIndicator` o mensaje de error.
+
+Todo dato que venga de Firestore o del backend se maneja como `AsyncValue` (loading / data / error)
+en Riverpod. Nunca una pantalla en blanco sin feedback — mínimo un `CircularProgressIndicator`
+o un mensaje de error.
 
 ## Naming
-- Archivos: `snake_case.dart` (ej: `chat_screen.dart`, `trip_repository.dart`)
+
+- Archivos: `snake_case.dart` (`chat_screen.dart`, `trip_repository.dart`)
 - Clases: `PascalCase`
-- Sufijos claros: `_screen.dart` (pantallas), `_provider.dart` (providers/notifiers), `_repository.dart`, `_model.dart`
+- Sufijos: `_screen.dart`, `_notifier.dart` / `_provider.dart`, `_repository.dart`, `_model.dart`
+
+## Contrato del backend (congelado en FASE 1)
+
+```jsonc
+// POST /api/chat
+// request
+{ "profileId": "voyanties-demo", "tripId": "abc | null", "messages": [ {"role":"user","content":"..."} ] }
+// response
+{ "reply": "...", "tripId": "abc", "itinerarySaved": true, "error": null }
+```
+- El backend escribe `profileId` en el doc `trips` (lo toma del request, el modelo no lo ve).
+- `tripId` **siempre** vuelve en la respuesta. `itinerarySaved: true` cuando el agente llamó `save_itinerary` ese turno.
 
 ## Git — flujo simplificado para hoy
-- Una rama por squad: `feature/agente`, `feature/ui`, `feature/datos` (o las que definan)
-- Commits pequeños y frecuentes, mensajes cortos y claros
-- Merge a `main` en cuanto algo funcione localmente — **no hay PR review formal hoy**, solo prueben antes de mergear
-- Si algo rompe `main`, revertir el commit inmediatamente, no debuggear en vivo sobre la rama compartida
+
+- Ramas: `feature/agent` (Squad A / backend), `feature/ui` (Squad B). Squad C trabaja en `main` (solo docs/deck).
+- Commits pequeños y frecuentes, mensajes cortos.
+- Merge a `main` en cuanto algo funcione localmente — **no hay PR review formal hoy**, solo prueben antes.
+- Si algo rompe `main`: **revertir el commit de inmediato**, no debuggear en vivo sobre la rama compartida.
 
 ## Secrets
-La API key de Claude y la de Google Places viven **solo** en las variables de entorno de la Cloud Function. Nunca en código Flutter, nunca en un commit.
+
+- API keys (Anthropic, Google Places) viven **solo**:
+  - **Local:** `functions/.env` (ya está en `.gitignore`). Hay un `functions/.env.example` con los nombres.
+  - **Deploy:** `firebase functions:secrets:set ANTHROPIC_API_KEY` → Secret Manager; en el código `defineSecret('ANTHROPIC_API_KEY')`.
+- **Nunca** en código Flutter, nunca en un commit, nunca en `console.log`, nunca con `functions:config:set` en archivo commiteado.
+- `lib/firebase_options.dart` **SÍ se commitea** — su Web API key es pública por diseño (la seguridad está en las reglas de Firestore).
+- Antes de cada push: `git status` + un vistazo al diff.
 
 ## Qué NO hacer hoy
-No tests unitarios exhaustivos, no CI/CD, no capas de abstracción extra que no aporten (ej. use-cases si el repository ya es suficientemente simple), no manejo de auth complejo (usen Auth anónimo o un usuario fijo).
+
+- No tests unitarios exhaustivos, no CI/CD.
+- **No Auth** (ni anónima ni real) — el perfil fijo `PROFILE_ID` alcanza.
+- No capas de abstracción extra (use-cases si el repository ya es simple).
+- No `build_runner` / codegen de ningún tipo.
+- No soporte mobile nativo — es Flutter **Web**.
