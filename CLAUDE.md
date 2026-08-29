@@ -45,7 +45,8 @@ lib/
     chat_agent/      → data / domain / presentation   (rama feature/ui)
     itinerary_view/  → data / domain / presentation   (rama feature/ui)
 functions/           → Cloud Function del agente        (rama feature/agent)
-  .env.example       → nombres de los secrets (los valores van en .env, gitignored)
+  index.js           → esqueleto: /chat, defineSecret, timeout 300s (deployado, devuelve 501)
+  .secret.local.example → plantilla de keys (los valores van en .secret.local — solo emulador, gitignored)
 ```
 
 ## Comandos clave
@@ -53,8 +54,8 @@ functions/           → Cloud Function del agente        (rama feature/agent)
 flutter run -d chrome                       # desarrollo
 flutter build web                           # build de producción
 firebase deploy --only hosting
-firebase deploy --only functions
-firebase functions:secrets:set ANTHROPIC_API_KEY   # y GOOGLE_PLACES_API_KEY (una vez)
+firebase deploy --only functions            # función `api` ya deployada
+firebase functions:secrets:set ANTHROPIC_API_KEY   # ya hecho (y GOOGLE_PLACES_API_KEY)
 firebase emulators:start                    # Firestore + Functions locales (opcional)
 ```
 

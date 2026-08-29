@@ -137,7 +137,7 @@ C17 (`README.md` / `pubspec description`).
 ### D.2 · `mymds/rules.md`  *(resuelve C18, B8)* — ✅ APLICADO
 - Ramas alineadas a `feature/agent` / `feature/ui`; Squad C en `main`.
 - "Qué NO hacer": Auth fuera; perfil fijo `PROFILE_ID`.
-- "Secrets": `functions/.env` local + `firebase functions:secrets:set` para deploy.
+- "Secrets": `functions/.secret.local` (emulador) + `firebase functions:secrets:set` para deploy.
 - Añadidas secciones de contrato del backend, fechas ISO, y config de la Cloud Function.
 
 ### D.3 · `mymds/02-technical-architecture.md`  *(resuelve B8, B10, B11, B12, B13, A5)* — ✅ APLICADO

@@ -62,12 +62,15 @@ Flutter (itinerary_view feature) escucha Firestore en tiempo real (stream)
 
 ## Cloud Function — config
 
-- **Región:** `us-central1`. Endpoint exportado: `api` (Express montado en `onRequest`).
+- **Deployada:** `api` en `us-central1`, Node 22, 2nd gen. URL cruda:
+  `https://us-central1-mi-viaje-11d84.cloudfunctions.net/api` (pero Flutter usa `/api/**`).
+  Hoy devuelve `501 not_implemented` — Track A implementa el loop del agente.
 - **`timeoutSeconds: 300`, `memory: "512MiB"`** — el loop de tools (Claude + 2-3 round trips + Places)
   pasa fácil los 60s por defecto.
-- **Secrets:** `defineSecret('ANTHROPIC_API_KEY')` y `defineSecret('GOOGLE_PLACES_API_KEY')`.
-  Local → `functions/.env` (gitignored). Deploy → `firebase functions:secrets:set` (Secret Manager).
-  **Ya están seteados** (Secret Manager, versión 1). Ver `rules.md` § Secrets.
+- **Secrets:** `defineSecret('ANTHROPIC_API_KEY')` / `defineSecret('GOOGLE_PLACES_API_KEY')` — ya en
+  Secret Manager. **Emulador local** → `functions/.secret.local` (gitignored). ⚠️ **NO usar `functions/.env`**
+  para estas keys: Firebase lo despliega como env var y choca con `defineSecret`
+  (`Secret environment variable overlaps non secret environment variable`). Ver `rules.md` § Secrets.
 - **CORS:** no se maneja en la función — el rewrite `"/api/**" → api` en `firebase.json` hace que
   Flutter y la función compartan origen.
 
@@ -182,15 +185,18 @@ https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={ph
 Esto se hace en el backend, y la URL resultante se guarda en `location.photoUrl`.
 
 ⚠️ **Esa URL lleva la API key** → cuando el cliente renderiza la foto, la key de Places queda visible
-en la red. Para el demo es tolerable **porque** la key está restringida a la Places API + hay budget
-alert. Si sobra tiempo: endpoint proxy `/api/photo?ref=...` en la función (la key nunca llega al cliente).
+en la red. Para el demo es tolerable. Hardening opcional: restringir la key a la Places API, o endpoint
+proxy `/api/photo?ref=...` en la función (la key nunca llega al cliente).
 
-## Checklist de setup — estado actual
-- [x] API key de Claude → en `functions/.env` + Secret Manager
-- [x] API key de Google Places → en `functions/.env` + Secret Manager (restringir a "Places API" en GCP)
-- [x] Proyecto Firebase `mi-viaje-11d84` en **plan Blaze** + Firestore creado (reglas abiertas hasta 2026-09-28) + índice `trips`
+## Checklist de setup — estado actual (2026-08-29)
+- [x] API key de Claude → `functions/.secret.local` + Secret Manager
+- [x] API key de Google Places → `functions/.secret.local` + Secret Manager
+- [x] Proyecto Firebase `mi-viaje-11d84` en **plan Blaze** + Firestore + reglas (hasta 2026-09-28) + índice `trips`
+- [x] Places API habilitada en GCP
 - [x] `flutterfire configure` → `lib/firebase_options.dart` (commiteado; su Web API key es pública)
-- [x] Dependencias Flutter añadidas (`flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`, `google_fonts`, `cached_network_image`, `intl`)
-- [x] `functions/` scaffold (`package.json`, `index.js` esqueleto, `.env` local, `npm install` hecho)
-- [ ] Hosting: `firebase init hosting` / primer `firebase deploy --only hosting`
+- [x] Dependencias Flutter (`flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`, `google_fonts`, `cached_network_image`, `intl`)
+- [x] `functions/` scaffold + `npm install` + **`firebase deploy --only functions`** (función `api` viva, devuelve 501)
+- [x] Árbol de carpetas `lib/` + scaffold del contador eliminado
+- [ ] Hosting: `firebase deploy --only hosting` (tras `flutter build web`) — FASE 4
+- [ ] Track A: implementar el loop del agente en `functions/index.js`
 - [ ] Track A: implementar el loop del agente en `functions/index.js`

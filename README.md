@@ -1,17 +1,25 @@
-# voyanties
+# Voyantis
 
-A new Flutter project.
+Agente conversacional que diagnostica el perfil de un viajero y genera un itinerario de viaje
+visual y estructurado (vuelos, hospedaje, actividades día por día, presupuesto). Demo de hackathon.
 
-## Getting Started
+## Empezar por aquí
+- [`phases.md`](phases.md) — fases por dependencia + qué se paraleliza.
+- [`auditoria.md`](auditoria.md) — hallazgos y decisiones.
+- [`CLAUDE.md`](CLAUDE.md) — contexto para agentes / resumen del stack.
+- [`mymds/rules.md`](mymds/rules.md) — convenciones y decisiones fijas.
 
-This project is a starting point for a Flutter application.
+## Stack
+Flutter Web + Riverpod (sin codegen) · Firebase (Firestore + Hosting + Cloud Functions, plan Blaze) ·
+Cloud Function Node 20 como proxy hacia Claude API (`claude-opus-5`, tool use) y Google Places.
 
-A few resources to get you started if this is your first Flutter project:
+## Correr
+```bash
+flutter pub get
+flutter run -d chrome
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# backend
+cd functions && npm install
+cp .secret.local.example .secret.local   # rellenar con las keys reales (gitignored, solo emulador)
+firebase emulators:start --only functions
+```

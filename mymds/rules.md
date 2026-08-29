@@ -80,9 +80,12 @@ o un mensaje de error.
 ## Secrets
 
 - API keys (Anthropic, Google Places) viven **solo**:
-  - **Local:** `functions/.env` (ya está en `.gitignore`). Hay un `functions/.env.example` con los nombres.
-  - **Deploy:** `firebase functions:secrets:set ANTHROPIC_API_KEY` → Secret Manager; en el código `defineSecret('ANTHROPIC_API_KEY')`.
+  - **Emulador local:** `functions/.secret.local` (gitignored). Plantilla: `functions/.secret.local.example`.
+  - **Deploy:** Secret Manager (`firebase functions:secrets:set ...`, ya hecho); en el código `defineSecret(...)` + `.value()`.
+  - ⚠️ **NO** poner estas keys en `functions/.env` — Firebase lo despliega como env var y choca con `defineSecret`
+    (`Secret environment variable overlaps non secret environment variable`).
 - **Nunca** en código Flutter, nunca en un commit, nunca en `console.log`, nunca con `functions:config:set` en archivo commiteado.
+- Las keys de este demo se compartieron en texto plano en un chat → **rotarlas después del evento**.
 - `lib/firebase_options.dart` **SÍ se commitea** — su Web API key es pública por diseño (la seguridad está en las reglas de Firestore).
 - Antes de cada push: `git status` + un vistazo al diff.
 

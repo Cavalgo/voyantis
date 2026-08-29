@@ -71,8 +71,10 @@ exports.api = onRequest(
   app // express
 );
 ```
-- Local: `functions/.env` (gitignored) con `ANTHROPIC_API_KEY=...`. Copiar de `functions/.env.example`.
-- Deploy: `firebase functions:secrets:set ANTHROPIC_API_KEY` (una vez por secret).
+- Emulador: `functions/.secret.local` (gitignored) con `ANTHROPIC_API_KEY=...`. Copiar de `functions/.secret.local.example`.
+- ⚠️ **NO** uses `functions/.env` para estas keys — se despliega como env var y choca con `defineSecret`.
+- Deploy: `firebase functions:secrets:set ANTHROPIC_API_KEY` (ya hecho para las 2). Ya deployada.
+- En el código: leer con `ANTHROPIC_API_KEY.value()` dentro del handler.
 
 ## 6. Evitar CORS
 `firebase.json`:

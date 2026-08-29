@@ -61,6 +61,8 @@ functions/lib/
 functions/.env
 functions/.env.*
 functions/.runtimeconfig.json
+functions/.secret.local
+functions/*.local
 # ...pero SÍ commitear los .example (plantillas sin valores reales)
 !.env.example
-!functions/.env.example
+!functions/.secret.local.example

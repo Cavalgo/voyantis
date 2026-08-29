@@ -21,51 +21,49 @@ dos horas de merge hell en FASE 2.
 
 ---
 
-## FASE 0 — Fundaciones y setup
-**Bloqueante para todo. ~30–40 min. 2 personas trabajando; el resto lee los docs de su squad.**
+## FASE 0 — Fundaciones y setup — ✅ CERRADA (2026-08-29)
 
-> **Estado (2026-08-29) — buena parte ya hecha:**
-> ✅ Proyecto Firebase `mi-viaje-11d84` en **Blaze** · Firestore creado + reglas + índice `trips` desplegados ·
-> **Places API habilitada** · `flutterfire configure` → `lib/firebase_options.dart` · keys de Claude y Places
-> en `functions/.env` **y** Secret Manager · deps de Flutter añadidas · `functions/` scaffold + `npm install` ·
-> repo en GitHub con ramas.
-> ⏳ **Falta:** árbol de carpetas `lib/` · limpiar el scaffold (`lib/main.dart`, `test/`) ·
-> primer `firebase deploy --only functions`.
+> Todo hecho. Lo que sigue es FASE 1 (contratos) y los tracks.
+> Estado: repo en GitHub (3 ramas) · Firebase `mi-viaje-11d84` (Blaze) · Firestore + reglas + índice
+> `trips` desplegados · Places API habilitada · keys en `functions/.secret.local` + Secret Manager ·
+> deps de Flutter (`flutter analyze` + `flutter test` limpios) · `functions/` con esqueleto **deployado**
+> (`https://us-central1-mi-viaje-11d84.cloudfunctions.net/api`, devuelve 501 hasta que Track A lo implemente) ·
+> árbol de carpetas `lib/` creado · scaffold del contador eliminado (shell base con tema en `lib/main.dart`).
 
-Se divide en 3 frentes que corren **en paralelo**:
+Se dividió en 3 frentes que corrieron **en paralelo**:
 
 ### Frente 0.A — Cuentas, servicios y API keys — ✅ hecho
 - [x] **0.A.1** Proyecto Firebase `mi-viaje-11d84` en **plan Blaze**. `firebase login` = cavalgo01@gmail.com.
 - [x] **0.A.2** Firestore creado. Reglas abiertas hasta **2026-09-28** (`firestore.rules`, desplegado).
       Índice compuesto `trips (profileId ASC, updatedAt DESC)` desplegado (`firestore.indexes.json`).
 - [x] **0.A.4** `flutterfire configure` → `lib/firebase_options.dart` (commiteado; su Web API key es pública).
-- [x] **0.A.5** API key de Anthropic → `functions/.env` + Secret Manager (`ANTHROPIC_API_KEY`).
-- [x] **0.A.6** API key de Google Places → `functions/.env` + Secret Manager (`GOOGLE_PLACES_API_KEY`).
+- [x] **0.A.5** API key de Anthropic → `functions/.secret.local` + Secret Manager (`ANTHROPIC_API_KEY`).
+- [x] **0.A.6** API key de Google Places → `functions/.secret.local` + Secret Manager (`GOOGLE_PLACES_API_KEY`).
 - [x] **Places API habilitada** en GCP. La URL de foto lleva la key (ver `auditoria.md` B10) —
       *hardening opcional, no blocker:* restringir la key a "Places API" en GCP Console.
-- [x] **0.A.8** `functions/.env` (gitignored) + `functions/.env.example` (commiteado). Secrets de deploy
+- [x] **0.A.8** `functions/.secret.local` (gitignored) + `functions/.secret.local.example` (commiteado). Secrets de deploy
       seteados. Verificado: ninguna key en el historial de git.
 
 ### Frente 0.B — Toolchain local — ✅ hecho
 Node 24 · npm 11 · Firebase CLI 15.28.2 · FlutterFire CLI 1.4.1 · Flutter 3.47.1 / Dart 3.13.1.
 
-### Frente 0.C — Scaffold de código — PARCIAL
+### Frente 0.C — Scaffold de código — ✅ hecho
 - [x] **0.C.1** Deps en `pubspec.yaml` (`flutter_riverpod`, `firebase_core`, `cloud_firestore`, `http`,
-      `google_fonts`, `cached_network_image`, `intl`). `flutter analyze` limpio.
-- [x] **functions/**: `package.json` + `index.js` (esqueleto: `/chat`, `defineSecret`, timeout 300s/512MiB),
-      `.env` local, `.env.example`. `npm install` hecho.
-- [ ] **0.C.2** Árbol de carpetas `lib/core/{models,services,theme}` + `lib/features/{chat_agent,itinerary_view}/{data,domain,presentation/widgets}`. **FALTA.**
-- [ ] **0.C.3** Limpiar scaffold: `lib/main.dart` → `ProviderScope` + `MaterialApp` + navegación (borrar el
-      contador); borrar/stub `test/widget_test.dart`; actualizar `README.md` + `description:` de pubspec. **FALTA.**
+      `google_fonts`, `cached_network_image`, `intl`). `flutter analyze` + `flutter test` limpios.
+- [x] **functions/**: `package.json` (Node 22) + `index.js` (esqueleto: `/chat`, `defineSecret`, 300s/512MiB),
+      `.secret.local` local, `.secret.local.example`. `npm install` hecho.
+- [x] **0.C.2** Árbol `lib/core/{config.dart, models, services, theme/app_theme.dart}` +
+      `lib/features/{chat_agent,itinerary_view}/{data,domain,presentation/widgets}` (cada feature con su README).
+- [x] **0.C.3** `lib/main.dart` → `ProviderScope` + `MaterialApp` + tema + shell placeholder (contador fuera);
+      `test/widget_test.dart` = smoke test; `README.md` + `description:` de pubspec actualizados.
 
-### Cierre de FASE 0
-- [x] **0.D.1** git + remoto GitHub + push `main`. **0.D.2** ramas `feature/agent` / `feature/ui`.
+### Cierre de FASE 0 — ✅ hecho
+- [x] **0.D.1** git + remoto GitHub + push. **0.D.2** ramas `feature/agent` / `feature/ui`.
 - [x] **0.D.4** `firebase.json` con rewrite `"/api/**" → api` (+ SPA fallback, functions, firestore, emuladores).
-- [ ] **0.D.3** Primer `firebase deploy --only functions` → URL real de la función (el esqueleto ya devuelve
-      501; sirve para probar el rewrite y CORS). **FALTA.**
+- [x] **0.D.3** `firebase deploy --only functions` → **`api` deployada** (Node 22, us-central1).
+      Smoke test OK: POST válido → 501 `not_implemented`; POST vacío → 400. Track A la implementa.
 
-**Salida de FASE 0:** repo vivo ✅, deps listas ✅, infra Firebase lista ✅.
-Falta: árbol de carpetas + limpiar scaffold (0.C.2/0.C.3) y primer deploy de la función (0.D.3).
+**Salida de FASE 0:** ✅ repo vivo, deps listas, infra Firebase lista, función deployada.
 
 ---
 
@@ -256,4 +254,4 @@ git checkout feature/agent   # Squad A   (o feature/ui — Squad B)
 - Una rama por track: `feature/agent` (Squad A), `feature/ui` (Squad B). Squad C trabaja en `main` (solo docs).
 - Commits pequeños y frecuentes. Merge a `main` en cuanto algo funcione localmente — sin PR review formal hoy.
 - Si algo rompe `main`: revertir el commit de inmediato, no debuggear sobre la rama compartida.
-- Secrets (Anthropic, Google Places): `functions/.env` local (gitignored) + `firebase functions:secrets:set` para deploy. Nunca en un commit. Ver `mymds/rules.md` § Secrets.
+- Secrets (Anthropic, Google Places): `functions/.secret.local` local (gitignored) + `firebase functions:secrets:set` para deploy. Nunca en un commit. Ver `mymds/rules.md` § Secrets.
