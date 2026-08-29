@@ -67,10 +67,26 @@ Node 24 · npm 11 · Firebase CLI 15.28.2 · FlutterFire CLI 1.4.1 · Flutter 3.
 
 ---
 
-## FASE 1 — Contratos y modelos
+## FASE 1 — Contratos y modelos — ✅ CERRADA (2026-08-29) · en `main`
 **Bloqueante para la integración. ~30 min. 1 persona de Squad A + 1 de Squad B, juntas.**
 
 Todo lo de esta fase se **congela** y no se re-discute durante el bloque de desarrollo.
+
+> **Estado:** todo en `main` (ramas `feature/agent` / `feature/ui` sincronizadas).
+> - **1.1** Modelos Dart planos (sin codegen) en `lib/core/models/` — un archivo por modelo +
+>   `models.dart` (barrel) + `parsing.dart` (helpers tolerantes). `fromJson`/`toJson` alineados al
+>   schema de `trips`; fechas de contenido = String ISO, `createdAt`/`updatedAt` = `DateTime`
+>   (tolera `Timestamp` de Firestore). `flutter analyze` limpio.
+> - **1.2** Contrato HTTP: `ChatMessage` / `ChatRequest` / `ChatResponse` en `lib/core/models/`,
+>   cuadran con `functions/index.js`.
+> - **1.3** `functions/tools.js` = fuente de verdad de los `input_schema` de `search_places` y
+>   `save_itinerary` (sub-objetos expandidos desde `02-technical-architecture.md`). `index.js` lo
+>   importa; `GET /api/tools` los expone para inspección.
+> - **1.4** Seed `trips/demo-seed` **escrito y visible en Firestore** (Oaxaca, 3 días × 3 actividades,
+>   fotos Unsplash reales, `profileId: voyantis-demo`, `updatedAt` server timestamp). Script
+>   reproducible: `node scripts/seed_firestore.mjs`.
+> - **Verificación:** `flutter analyze` limpio · `test/models_roundtrip_test.dart` (9 casos, incl.
+>   round-trip idempotente y tolerancia a campos ausentes) · doc visible en la consola de Firestore.
 
 - **1.1 — Modelos Dart** (`lib/core/models/`): `Trip`, `TravelerProfile`, `Summary`, `Flight`,
   `Accommodation`, `Day`, `Activity`, `Location`, `BudgetBreakdown`.

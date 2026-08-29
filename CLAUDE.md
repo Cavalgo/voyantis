@@ -38,15 +38,20 @@ Flutter ya está (3.47.1 / Dart 3.13.1).
 lib/
   core/
     config.dart      → PROFILE_ID y constantes globales
-    models/          → Trip, TravelerProfile, Activity, etc.
+    models/          → FASE 1 congelada: trip.dart, traveler_profile.dart, summary.dart, flight.dart,
+                       accommodation.dart, day.dart, activity.dart, location.dart, budget_breakdown.dart,
+                       chat_message/request/response.dart · models.dart (barrel) · parsing.dart (helpers)
     services/        → FirestoreService, ApiClient (Cloud Function)
     theme/           → estilos del timeline aesthetic
   features/
     chat_agent/      → data / domain / presentation   (rama feature/ui)
     itinerary_view/  → data / domain / presentation   (rama feature/ui)
 functions/           → Cloud Function del agente        (rama feature/agent)
-  index.js           → esqueleto: /chat, defineSecret, timeout 300s (deployado, devuelve 501)
+  index.js           → esqueleto: /chat, defineSecret, timeout 300s (deployado, devuelve 501); GET /tools
+  tools.js           → FASE 1: input_schema de search_places / save_itinerary (fuente de verdad compartida)
   .secret.local.example → plantilla de keys (los valores van en .secret.local — solo emulador, gitignored)
+scripts/
+  seed_firestore.mjs → escribe trips/demo-seed (seed de FASE 1.4 + fallback del pitch)
 ```
 
 ## Comandos clave
