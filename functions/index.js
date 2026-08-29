@@ -33,6 +33,16 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+// El rewrite de Hosting `"/api/**"` reenvía el path COMPLETO (`/api/chat`);
+// la URL cruda de la función lo entrega como `/chat`. Normalizamos quitando el
+// prefijo `/api` para que las rutas de abajo sirvan en ambos casos.
+app.use((req, _res, next) => {
+  if (req.url === "/api" || req.url.startsWith("/api/") || req.url.startsWith("/api?")) {
+    req.url = req.url.slice(4) || "/";
+  }
+  next();
+});
+
 // Inspección del contrato de tools congelado en FASE 1 (útil para Track A/B/C).
 app.get("/tools", (_req, res) => {
   res.json({ tools: TOOLS.map((t) => t.name), schemas: TOOLS });
